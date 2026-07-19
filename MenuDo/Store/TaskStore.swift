@@ -8,6 +8,7 @@ final class TaskStore {
     private(set) var loadFailureNotice: String?
 
     private let fileURL: URL
+    @ObservationIgnored private var pendingSave: Task<Void, Never>?
 
     nonisolated static var defaultFileURL: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -17,6 +18,7 @@ final class TaskStore {
 
     init(fileURL: URL = TaskStore.defaultFileURL) {
         self.fileURL = fileURL
+        load()
     }
 
     // MARK: - Derived state
@@ -68,9 +70,43 @@ final class TaskStore {
         scheduleSave()
     }
 
-    // MARK: - Persistence (implemented in the persistence task)
+    // MARK: - Persistence
+
+    func saveNow() {
+        do {
+            try FileManager.default.createDirectory(
+                at: fileURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            let data = try encoder.encode(items)
+            try data.write(to: fileURL, options: .atomic)
+        } catch {
+            // In-memory state stays authoritative; the next mutation retries via scheduleSave().
+        }
+    }
+
+    private func load() {
+        guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
+        do {
+            let data = try Data(contentsOf: fileURL)
+            items = try JSONDecoder().decode([TodoItem].self, from: data)
+        } catch {
+            let backupURL = fileURL.appendingPathExtension("bak")
+            try? FileManager.default.removeItem(at: backupURL)
+            try? FileManager.default.copyItem(at: fileURL, to: backupURL)
+            items = []
+            loadFailureNotice = "Couldn't read saved tasks — backup kept"
+        }
+    }
 
     private func scheduleSave() {
-        // Persistence lands in the next task.
+        pendingSave?.cancel()
+        pendingSave = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(500))
+            guard !Task.isCancelled else { return }
+            self?.saveNow()
+        }
     }
 }
