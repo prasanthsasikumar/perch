@@ -64,12 +64,15 @@ struct TaskListView: View {
                     Image(systemName: "gearshape")
                 }
                 .help("Settings")
+                .accessibilityLabel("Settings")
                 Button {
+                    store.saveNow()
                     NSApp.terminate(nil)
                 } label: {
                     Image(systemName: "power")
                 }
                 .help("Quit MenuDo")
+                .accessibilityLabel("Quit MenuDo")
             }
             .buttonStyle(.borderless)
             .padding(12)

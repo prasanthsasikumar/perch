@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Observation
 
@@ -19,6 +20,11 @@ final class TaskStore {
     init(fileURL: URL = TaskStore.defaultFileURL) {
         self.fileURL = fileURL
         load()
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.willTerminateNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.saveNow() }
+        }
     }
 
     // MARK: - Derived state
@@ -57,11 +63,19 @@ final class TaskStore {
     func movePending(fromOffsets source: IndexSet, toOffset destination: Int) {
         var reordered = pending
         reordered.move(fromOffsets: source, toOffset: destination)
-        for (newOrder, item) in reordered.enumerated() {
-            if let index = items.firstIndex(where: { $0.id == item.id }) {
-                items[index].sortOrder = newOrder
-            }
+        var order = 0
+        var renumbered: [TodoItem] = []
+        for var item in reordered {
+            item.sortOrder = order
+            order += 1
+            renumbered.append(item)
         }
+        for var item in done {
+            item.sortOrder = order
+            order += 1
+            renumbered.append(item)
+        }
+        items = renumbered
         scheduleSave()
     }
 
@@ -73,6 +87,7 @@ final class TaskStore {
     // MARK: - Persistence
 
     func saveNow() {
+        pendingSave?.cancel()
         do {
             try FileManager.default.createDirectory(
                 at: fileURL.deletingLastPathComponent(),

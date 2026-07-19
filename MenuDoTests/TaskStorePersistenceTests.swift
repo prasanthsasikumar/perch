@@ -49,4 +49,13 @@ final class TaskStorePersistenceTests: XCTestCase {
         try await Task.sleep(for: .seconds(1.5))
         XCTAssertTrue(FileManager.default.fileExists(atPath: fileURL.path))
     }
+
+    func testSaveNowCancelsPendingDebouncedSave() async throws {
+        let store = TaskStore(fileURL: fileURL)
+        store.add("A")
+        store.saveNow()
+        try FileManager.default.removeItem(at: fileURL)
+        try await Task.sleep(for: .seconds(1))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: fileURL.path))
+    }
 }

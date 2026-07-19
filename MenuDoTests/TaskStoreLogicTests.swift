@@ -66,4 +66,16 @@ final class TaskStoreLogicTests: XCTestCase {
         store.clearCompleted()
         XCTAssertEqual(store.items.map(\.title), ["B"])
     }
+
+    func testMovePendingAfterToggleKeepsUniqueSortOrders() {
+        store.add("A")
+        store.add("B")
+        store.add("C")
+        let bID = store.pending[1].id
+        store.toggle(bID)
+        store.movePending(fromOffsets: IndexSet(integer: 1), toOffset: 0)
+        store.toggle(bID)
+        XCTAssertEqual(Set(store.items.map(\.sortOrder)).count, store.items.count)
+        XCTAssertEqual(store.pending.map(\.title), ["C", "A", "B"])
+    }
 }

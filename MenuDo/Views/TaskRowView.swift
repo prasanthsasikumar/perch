@@ -34,5 +34,9 @@ struct TaskRowView: View {
         }
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
+        .contextMenu {
+            Button("Delete", role: .destructive) { store.delete(item.id) }
+        }
+        .accessibilityAction(named: "Delete") { store.delete(item.id) }
     }
 }
