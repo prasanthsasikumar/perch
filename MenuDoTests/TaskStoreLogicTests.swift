@@ -1,0 +1,69 @@
+import XCTest
+@testable import MenuDo
+
+@MainActor
+final class TaskStoreLogicTests: XCTestCase {
+    private var fileURL: URL!
+    private var store: TaskStore!
+
+    override func setUp() {
+        super.setUp()
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("MenuDoTests-\(UUID().uuidString)", isDirectory: true)
+        fileURL = dir.appendingPathComponent("tasks.json")
+        store = TaskStore(fileURL: fileURL)
+    }
+
+    func testAddAppendsTrimmedPendingTask() {
+        store.add("  Buy milk  ")
+        XCTAssertEqual(store.pending.map(\.title), ["Buy milk"])
+    }
+
+    func testAddIgnoresEmptyAndWhitespaceTitles() {
+        store.add("")
+        store.add("   ")
+        XCTAssertTrue(store.items.isEmpty)
+    }
+
+    func testCurrentTaskIsFirstIncompleteBySortOrder() {
+        store.add("First")
+        store.add("Second")
+        XCTAssertEqual(store.currentTask?.title, "First")
+        store.toggle(store.currentTask!.id)
+        XCTAssertEqual(store.currentTask?.title, "Second")
+    }
+
+    func testToggleMovesTaskBetweenPendingAndDone() {
+        store.add("A")
+        let id = store.pending[0].id
+        store.toggle(id)
+        XCTAssertTrue(store.pending.isEmpty)
+        XCTAssertEqual(store.done.map(\.title), ["A"])
+        store.toggle(id)
+        XCTAssertEqual(store.pending.map(\.title), ["A"])
+    }
+
+    func testDeleteRemovesTask() {
+        store.add("A")
+        store.add("B")
+        store.delete(store.pending[0].id)
+        XCTAssertEqual(store.pending.map(\.title), ["B"])
+    }
+
+    func testMovePendingReordersAndRenumbers() {
+        store.add("A")
+        store.add("B")
+        store.add("C")
+        store.movePending(fromOffsets: IndexSet(integer: 2), toOffset: 0)
+        XCTAssertEqual(store.pending.map(\.title), ["C", "A", "B"])
+        XCTAssertEqual(store.pending.map(\.sortOrder), [0, 1, 2])
+    }
+
+    func testClearCompletedRemovesOnlyDoneTasks() {
+        store.add("A")
+        store.add("B")
+        store.toggle(store.pending[0].id)
+        store.clearCompleted()
+        XCTAssertEqual(store.items.map(\.title), ["B"])
+    }
+}
