@@ -1,3 +1,4 @@
+import KeyboardShortcuts
 import SwiftUI
 
 struct SettingsView: View {
@@ -43,6 +44,7 @@ struct SettingsView: View {
                         .font(.caption)
                         .foregroundStyle(.red)
                 }
+                KeyboardShortcuts.Recorder("Open MenuDo:", name: .openMenuDo)
             }
         }
         .formStyle(.grouped)

@@ -1,12 +1,16 @@
+import MenuBarExtraAccess
 import SwiftUI
 
 @main
 struct MenuDoApp: App {
     @State private var store = TaskStore()
+    @State private var appState = AppState()
     @AppStorage("showTitleInMenuBar") private var showTitleInMenuBar = true
     @AppStorage("titleTruncationLength") private var titleTruncationLength = 30
 
     var body: some Scene {
+        @Bindable var appState = appState
+
         MenuBarExtra {
             TaskListView(store: store)
         } label: {
@@ -19,6 +23,7 @@ struct MenuDoApp: App {
                 Image(systemName: "checkmark.circle")
             }
         }
+        .menuBarExtraAccess(isPresented: $appState.isMenuPresented)
         .menuBarExtraStyle(.window)
 
         Settings {
