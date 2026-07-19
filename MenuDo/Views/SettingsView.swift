@@ -22,13 +22,21 @@ struct SettingsView: View {
             Section("General") {
                 Toggle("Launch at login", isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, newValue in
+                        // Re-fired by the resync below; actual state already matches.
+                        guard newValue != LaunchAtLogin.isEnabled else { return }
                         do {
                             try LaunchAtLogin.set(newValue)
                             launchAtLoginError = nil
                         } catch {
                             launchAtLoginError = error.localizedDescription
                         }
-                        launchAtLogin = LaunchAtLogin.isEnabled
+                        let actual = LaunchAtLogin.isEnabled
+                        if actual != newValue {
+                            if newValue && LaunchAtLogin.status == .requiresApproval {
+                                launchAtLoginError = "Approval needed: enable MenuDo in System Settings → General → Login Items."
+                            }
+                            launchAtLogin = actual
+                        }
                     }
                 if let launchAtLoginError {
                     Text(launchAtLoginError)

@@ -5,6 +5,10 @@ enum LaunchAtLogin {
         SMAppService.mainApp.status == .enabled
     }
 
+    static var status: SMAppService.Status {
+        SMAppService.mainApp.status
+    }
+
     static func set(_ enabled: Bool) throws {
         if enabled {
             try SMAppService.mainApp.register()
