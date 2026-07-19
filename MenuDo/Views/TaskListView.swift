@@ -60,6 +60,10 @@ struct TaskListView: View {
                     Button("Clear completed") { store.clearCompleted() }
                 }
                 Spacer()
+                SettingsLink {
+                    Image(systemName: "gearshape")
+                }
+                .help("Settings")
                 Button {
                     NSApp.terminate(nil)
                 } label: {
