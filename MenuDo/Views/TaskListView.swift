@@ -5,6 +5,7 @@ struct TaskListView: View {
     @State private var newTitle = ""
     @State private var showDone = false
     @FocusState private var addFieldFocused: Bool
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -60,21 +61,17 @@ struct TaskListView: View {
                     Button("Clear completed") { store.clearCompleted() }
                 }
                 Spacer()
-                SettingsLink {
+                Button {
+                    // A menu bar only (LSUIElement) app is not active when its
+                    // dropdown is clicked, so Settings would open behind the
+                    // frontmost app unless we activate first.
+                    NSApp.activate(ignoringOtherApps: true)
+                    openSettings()
+                } label: {
                     Image(systemName: "gearshape")
                 }
                 .help("Settings")
                 .accessibilityLabel("Settings")
-                // LSUIElement apps are never active on menu bar clicks, so the
-                // Settings window would open behind the frontmost app.
-                .simultaneousGesture(TapGesture().onEnded {
-                    NSApp.activate(ignoringOtherApps: true)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        NSApp.windows
-                            .first { $0.identifier?.rawValue.hasPrefix("com_apple_SwiftUI_Settings") == true }?
-                            .makeKeyAndOrderFront(nil)
-                    }
-                })
                 Button {
                     store.saveNow()
                     NSApp.terminate(nil)
