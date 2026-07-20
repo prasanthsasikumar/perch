@@ -65,6 +65,16 @@ struct TaskListView: View {
                 }
                 .help("Settings")
                 .accessibilityLabel("Settings")
+                // LSUIElement apps are never active on menu bar clicks, so the
+                // Settings window would open behind the frontmost app.
+                .simultaneousGesture(TapGesture().onEnded {
+                    NSApp.activate(ignoringOtherApps: true)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        NSApp.windows
+                            .first { $0.identifier?.rawValue.hasPrefix("com_apple_SwiftUI_Settings") == true }?
+                            .makeKeyAndOrderFront(nil)
+                    }
+                })
                 Button {
                     store.saveNow()
                     NSApp.terminate(nil)
