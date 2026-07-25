@@ -34,23 +34,24 @@ struct TaskListView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 24)
             } else {
-                List {
-                    ForEach(store.pending) { item in
-                        TaskRowView(item: item, store: store)
-                    }
-                    .onMove { source, destination in
-                        store.movePending(fromOffsets: source, toOffset: destination)
-                    }
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ReorderableTaskList(store: store)
 
-                    if !store.done.isEmpty {
-                        DisclosureGroup("Done (\(store.done.count))", isExpanded: $showDone) {
-                            ForEach(store.done) { item in
-                                TaskRowView(item: item, store: store)
+                        if !store.done.isEmpty {
+                            DisclosureGroup("Done (\(store.done.count))", isExpanded: $showDone) {
+                                VStack(spacing: 0) {
+                                    ForEach(store.done) { item in
+                                        TaskRowView(item: item, store: store)
+                                            .padding(.vertical, 6)
+                                    }
+                                }
                             }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
                         }
                     }
                 }
-                .listStyle(.plain)
                 .frame(minHeight: 120, maxHeight: 360)
             }
 
