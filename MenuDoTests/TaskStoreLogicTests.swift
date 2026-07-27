@@ -106,6 +106,13 @@ final class TaskStoreLogicTests: XCTestCase {
         XCTAssertEqual(store.items.map(\.title), ["A"])
     }
 
+    func testRenameUpdatesCurrentTask() {
+        store.add("First")
+        store.add("Second")
+        store.rename(store.currentTask!.id, to: "First renamed")
+        XCTAssertEqual(store.currentTask?.title, "First renamed")
+    }
+
     func testRenamePreservesIdentityAndPosition() {
         store.add("A")
         store.add("B")
