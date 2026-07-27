@@ -4,6 +4,7 @@ struct TaskListView: View {
     @Bindable var store: TaskStore
     @State private var newTitle = ""
     @State private var showDone = false
+    @State private var editingID: UUID?
     @FocusState private var addFieldFocused: Bool
     @Environment(\.openSettings) private var openSettings
 
@@ -36,13 +37,13 @@ struct TaskListView: View {
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
-                        ReorderableTaskList(store: store)
+                        ReorderableTaskList(store: store, editingID: $editingID)
 
                         if !store.done.isEmpty {
                             DisclosureGroup("Done (\(store.done.count))", isExpanded: $showDone) {
                                 VStack(spacing: 0) {
                                     ForEach(store.done) { item in
-                                        TaskRowView(item: item, store: store)
+                                        TaskRowView(item: item, store: store, editingID: $editingID)
                                             .padding(.vertical, 6)
                                     }
                                 }

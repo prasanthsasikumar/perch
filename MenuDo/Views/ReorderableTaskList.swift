@@ -17,6 +17,7 @@ private struct RowHeightsKey: PreferenceKey {
 /// routed through AppKit's dragging machinery, so it works in the panel.
 struct ReorderableTaskList: View {
     let store: TaskStore
+    @Binding var editingID: UUID?
 
     @State private var draggingID: UUID?
     @State private var dragTranslation: CGFloat = 0
@@ -46,7 +47,7 @@ struct ReorderableTaskList: View {
     var body: some View {
         VStack(spacing: 0) {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                TaskRowView(item: item, store: store)
+                TaskRowView(item: item, store: store, editingID: $editingID)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
                     .background {
@@ -60,7 +61,14 @@ struct ReorderableTaskList: View {
                     .background(rowBackground(for: item.id))
                     .offset(y: verticalOffset(index: index, id: item.id))
                     .zIndex(item.id == draggingID ? 1 : 0)
-                    .gesture(dragGesture(for: item.id))
+                    // While a row is editing, dragging inside its text field
+                    // must select text, not start a reorder. `.subviews` keeps
+                    // the gesture off this view while leaving the text field's
+                    // own gestures intact.
+                    .gesture(
+                        dragGesture(for: item.id),
+                        including: editingID == item.id ? .subviews : .all
+                    )
             }
         }
         .onPreferenceChange(RowHeightsKey.self) { heights in
