@@ -9,6 +9,12 @@ struct TaskRowView: View {
     @State private var draftTitle = ""
     @FocusState private var fieldFocused: Bool
 
+    // Set synchronously inside `commit()`/`cancel()`, before either touches
+    // `editingID`. Read (and cleared) by `onDisappear` below to tell an
+    // explicit end of the edit apart from the field being torn down out from
+    // under it — see the state-machine note on `onDisappear`.
+    @State private var didEndExplicitly = false
+
     private var isEditing: Bool { editingID == item.id }
 
     var body: some View {
@@ -24,9 +30,44 @@ struct TaskRowView: View {
                         cancel()
                         return .handled
                     }
-                    // Clicking another row, or the add field, ends the edit.
+                    // Clicking another row's control, or the add field,
+                    // steals AppKit's first responder and ends the edit the
+                    // same way Return does.
                     .onChange(of: fieldFocused) { _, focused in
                         if !focused, isEditing { commit() }
+                    }
+                    // The field can mount two ways: `beginEditing()` just set
+                    // `draftTitle`/`editingID` together (normal path — this
+                    // is a same-value no-op), or this row was reconstructed
+                    // while `editingID` already named it — e.g. the item
+                    // moved between the pending list and the Done section,
+                    // or the panel reopened mid-edit — in which case this
+                    // fresh instance's `draftTitle` was never seeded and it
+                    // isn't focused. Seeding here from `item.title` and
+                    // grabbing focus makes both paths converge.
+                    .onAppear {
+                        draftTitle = item.title
+                        fieldFocused = true
+                    }
+                    // The field can unmount three ways: `commit()` ran
+                    // (Return, or focus lost to another control) or
+                    // `cancel()` ran (Esc) — both already did their job and
+                    // set `didEndExplicitly` before clearing `editingID`, so
+                    // the guard below skips them. Anything else reaching
+                    // this closure is a teardown this row never asked for:
+                    // the row got deleted, the panel closed mid-edit, or
+                    // another row's double-click stole `editingID` first.
+                    // None of those call `commit`/`cancel`, so per the
+                    // ruling that teardown must save (not discard), commit
+                    // the draft here. `rename` no-ops harmlessly if the item
+                    // was already deleted. Only clear `editingID` if it
+                    // still names this row — if another row already took
+                    // over, leave its edit alone.
+                    .onDisappear {
+                        defer { didEndExplicitly = false }
+                        guard !didEndExplicitly else { return }
+                        store.rename(item.id, to: draftTitle)
+                        if editingID == item.id { editingID = nil }
                     }
             } else {
                 Button {
@@ -64,9 +105,6 @@ struct TaskRowView: View {
         }
         .accessibilityAction(named: "Edit") { beginEditing() }
         .accessibilityAction(named: "Delete") { store.delete(item.id) }
-        .onChange(of: isEditing) { _, editing in
-            if editing { fieldFocused = true }
-        }
     }
 
     private func beginEditing() {
@@ -76,11 +114,13 @@ struct TaskRowView: View {
     }
 
     private func commit() {
+        didEndExplicitly = true
         store.rename(item.id, to: draftTitle)
         editingID = nil
     }
 
     private func cancel() {
+        didEndExplicitly = true
         editingID = nil
     }
 }
