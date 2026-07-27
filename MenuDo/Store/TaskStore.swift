@@ -60,6 +60,14 @@ final class TaskStore {
         scheduleSave()
     }
 
+    func rename(_ id: UUID, to title: String) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        guard let index = items.firstIndex(where: { $0.id == id }) else { return }
+        items[index].title = trimmed
+        scheduleSave()
+    }
+
     func movePending(fromOffsets source: IndexSet, toOffset destination: Int) {
         var reordered = pending
         reordered.move(fromOffsets: source, toOffset: destination)

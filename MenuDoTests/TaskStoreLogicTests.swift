@@ -78,4 +78,45 @@ final class TaskStoreLogicTests: XCTestCase {
         XCTAssertEqual(Set(store.items.map(\.sortOrder)).count, store.items.count)
         XCTAssertEqual(store.pending.map(\.title), ["C", "A", "B"])
     }
+
+    func testRenameUpdatesMatchingTaskOnly() {
+        store.add("A")
+        store.add("B")
+        store.rename(store.pending[0].id, to: "A renamed")
+        XCTAssertEqual(store.pending.map(\.title), ["A renamed", "B"])
+    }
+
+    func testRenameTrimsWhitespace() {
+        store.add("A")
+        store.rename(store.pending[0].id, to: "  Buy oat milk  ")
+        XCTAssertEqual(store.pending[0].title, "Buy oat milk")
+    }
+
+    func testRenameIgnoresEmptyAndWhitespaceTitles() {
+        store.add("A")
+        let id = store.pending[0].id
+        store.rename(id, to: "")
+        store.rename(id, to: "   ")
+        XCTAssertEqual(store.pending[0].title, "A")
+    }
+
+    func testRenameIgnoresUnknownID() {
+        store.add("A")
+        store.rename(UUID(), to: "Nope")
+        XCTAssertEqual(store.items.map(\.title), ["A"])
+    }
+
+    func testRenamePreservesIdentityAndPosition() {
+        store.add("A")
+        store.add("B")
+        store.toggle(store.pending[1].id)
+        let original = store.done[0]
+        store.rename(original.id, to: "B renamed")
+        let renamed = store.done[0]
+        XCTAssertEqual(renamed.id, original.id)
+        XCTAssertEqual(renamed.isDone, original.isDone)
+        XCTAssertEqual(renamed.sortOrder, original.sortOrder)
+        XCTAssertEqual(renamed.createdAt, original.createdAt)
+        XCTAssertEqual(renamed.title, "B renamed")
+    }
 }
