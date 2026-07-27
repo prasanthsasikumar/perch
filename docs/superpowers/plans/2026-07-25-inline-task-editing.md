@@ -122,7 +122,7 @@ In `MenuDo/Store/TaskStore.swift`, add directly after the `delete(_:)` method:
 xcodebuild test -project MenuDo.xcodeproj -scheme MenuDo -destination 'platform=macOS' -quiet 2>&1 | tail -20
 ```
 
-Expected: all tests pass (22 existing + 6 new = 28).
+Expected: all tests pass (40 existing + 6 new = 46).
 
 - [ ] **Step 5: Commit**
 
@@ -336,7 +336,7 @@ to:
 xcodebuild test -project MenuDo.xcodeproj -scheme MenuDo -destination 'platform=macOS' -quiet 2>&1 | tail -20
 ```
 
-Expected: builds clean, all 28 tests still pass.
+Expected: builds clean, all 46 tests still pass.
 
 If the compiler rejects the `including:` mask expression (SwiftUI's gesture
 modifiers can be fussy about ternaries in generic position), hoist it into a

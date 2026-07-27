@@ -58,4 +58,14 @@ final class TaskStorePersistenceTests: XCTestCase {
         try await Task.sleep(for: .seconds(1))
         XCTAssertFalse(FileManager.default.fileExists(atPath: fileURL.path))
     }
+
+    func testRenameSurvivesSaveAndReload() {
+        let store = TaskStore(fileURL: fileURL)
+        store.add("A")
+        store.rename(store.pending[0].id, to: "A renamed")
+        store.saveNow()
+
+        let reloaded = TaskStore(fileURL: fileURL)
+        XCTAssertEqual(reloaded.pending.map(\.title), ["A renamed"])
+    }
 }

@@ -29,11 +29,19 @@ hidden so the field spans the row.
 | Enter | Commit the draft, leave edit mode |
 | Esc | Discard the draft, leave edit mode |
 | Focus lost (another row, the add field) | Commit, same as Enter |
-
-If the panel is dismissed mid-edit the row's view is torn down; whether that
-delivers a focus-loss first is not guaranteed, so an uncommitted draft may be
-discarded. That is acceptable — the task keeps its previous title.
+| The row's view is torn down (panel dismissed, another row takes over the edit, Done section collapsed) | Commit, same as Enter |
 | Committing an empty or whitespace-only draft | `rename` no-ops, so the original title stands and the row leaves edit mode |
+
+Esc is therefore the only way to throw a draft away; every other ending
+saves it. An earlier revision of this spec called discarding on panel
+dismissal acceptable — that was overridden during implementation, because
+losing what you typed by clicking away is worse than saving it.
+
+Because teardown commits by default, the flag that suppresses the commit on
+the Esc path cannot live in `@State`: `cancel()` writes it in the same update
+cycle that unmounts the field, and a stale read would turn every Esc into a
+save. It is held in a small reference type instead, so the write and the read
+always reach the same storage.
 
 Clearing the text is deliberately not a way to delete a task: an accidental
 Cmd+A followed by Enter would otherwise destroy the item silently. Deleting
@@ -97,3 +105,6 @@ Esc may be swallowed by the `MenuBarExtra` panel, which closes on Esc. The
 deployment target is macOS 14, so `.onKeyPress(.escape)` is available as a
 fallback if `.onExitCommand` does not fire or the panel closes instead of
 cancelling the edit. Which one is used gets settled by running the app.
+
+**Settled:** `.onKeyPress(.escape)` returning `.handled` wins the key ahead of
+the panel. Verified by hand — Esc reverts the title and leaves the panel open.

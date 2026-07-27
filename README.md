@@ -29,6 +29,7 @@ A properly signed and notarized App Store build is planned, which will remove th
 
 - **Current task in the menu bar.** The first unfinished task on your list is always visible. Complete it and the next one takes its place.
 - **Quick add.** Open the dropdown, type, press Return.
+- **Edit in place.** Double-click a task to fix its title. Return saves, Escape cancels.
 - **Reorder by dragging.** Whatever you drag to the top becomes your current task.
 - **Done section.** Completed tasks collapse out of the way instead of disappearing. Clear them when you want.
 - **Global hotkey.** Set a shortcut in Settings to open the list and start typing from any app.
