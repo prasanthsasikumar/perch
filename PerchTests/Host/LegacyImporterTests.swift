@@ -86,6 +86,33 @@ final class LegacyImporterTests: XCTestCase {
         )
     }
 
+    func testFailedTaskCopyDoesNotMarkImportComplete() {
+        writeLegacyTasks()
+        // Obstruct the destination's parent path with a regular file, so
+        // creating the directory there must throw — simulating a transient
+        // failure (disk full, permissions, source vanishing mid-copy).
+        try! Data().write(to: tasksDestination.deletingLastPathComponent())
+
+        let result = performImport()
+        XCTAssertFalse(result.importedTasks)
+        XCTAssertFalse(suite.bool(forKey: "legacyImportCompleted"))
+
+        // Clear the obstruction and retry — a transient failure must not be sticky.
+        try! FileManager.default.removeItem(at: tasksDestination.deletingLastPathComponent())
+        XCTAssertTrue(performImport().importedTasks)
+    }
+
+    func testNothingToImportStillMarksComplete() {
+        XCTAssertFalse(performImport().importedTasks)
+        XCTAssertTrue(suite.bool(forKey: "legacyImportCompleted"))
+
+        // A subsequent run must be a no-op even once a source file appears —
+        // the whole point of the flag is to never re-stat the container again.
+        writeLegacyTasks()
+        XCTAssertFalse(performImport().importedTasks)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: tasksDestination.path))
+    }
+
     func testPreferencesAreCarriedAcross() {
         writeLegacyPreferences([
             "showTitleInMenuBar": false,

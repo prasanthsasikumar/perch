@@ -57,6 +57,17 @@ enum LegacyImporter {
         )
     }
 
+    /// A transient failure (disk full, permissions, source vanishing mid-copy)
+    /// must not be confused with there being nothing to import, or with the
+    /// destination legitimately already holding data — only the former should
+    /// leave `hasRunKey` unset so the next launch retries.
+    private enum TaskImportOutcome {
+        case imported
+        case nothingToImport
+        case alreadyHasData
+        case failed
+    }
+
     static func run(
         tasksSource: URL,
         tasksDestination: URL,
@@ -64,28 +75,43 @@ enum LegacyImporter {
         defaults: UserDefaults
     ) -> Result {
         guard !defaults.bool(forKey: hasRunKey) else { return Result() }
-        defer { defaults.set(true, forKey: hasRunKey) }
 
+        let outcome = importTasksOutcome(from: tasksSource, to: tasksDestination)
         var result = Result()
-        result.importedTasks = importTasks(from: tasksSource, to: tasksDestination)
+        result.importedTasks = (outcome == .imported)
         result.importedPreferences = importPreferences(from: preferencesSource, into: defaults)
+
+        // A genuine failure must be retried on the next launch. Every other
+        // outcome — nothing to import, or the destination already has data —
+        // is a legitimate, permanent completion.
+        if outcome != .failed {
+            defaults.set(true, forKey: hasRunKey)
+        }
         return result
     }
 
     /// Copies rather than moves, and refuses to touch a destination that
     /// already holds data — losing tasks to a migration would be unforgivable.
+    ///
+    /// Task 13's manual-import path calls this directly, deliberately
+    /// bypassing `hasRunKey` — its signature and "true means tasks were
+    /// copied" meaning must stay exactly as they are.
     static func importTasks(from source: URL, to destination: URL) -> Bool {
+        importTasksOutcome(from: source, to: destination) == .imported
+    }
+
+    private static func importTasksOutcome(from source: URL, to destination: URL) -> TaskImportOutcome {
         let fileManager = FileManager.default
-        guard fileManager.fileExists(atPath: source.path) else { return false }
-        guard !fileManager.fileExists(atPath: destination.path) else { return false }
+        guard fileManager.fileExists(atPath: source.path) else { return .nothingToImport }
+        guard !fileManager.fileExists(atPath: destination.path) else { return .alreadyHasData }
         do {
             try fileManager.createDirectory(
                 at: destination.deletingLastPathComponent(), withIntermediateDirectories: true
             )
             try fileManager.copyItem(at: source, to: destination)
-            return true
+            return .imported
         } catch {
-            return false
+            return .failed
         }
     }
 
