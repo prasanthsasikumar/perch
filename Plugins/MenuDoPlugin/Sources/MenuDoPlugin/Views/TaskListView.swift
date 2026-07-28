@@ -1,7 +1,6 @@
-import MenuDoPlugin
 import SwiftUI
 
-struct TaskListView: View {
+public struct TaskListView: View {
     @Bindable var store: TaskStore
     @State private var newTitle = ""
     @State private var showDone = false
@@ -9,7 +8,11 @@ struct TaskListView: View {
     @FocusState private var addFieldFocused: Bool
     @Environment(\.openSettings) private var openSettings
 
-    var body: some View {
+    public init(store: TaskStore) {
+        self.store = store
+    }
+
+    public var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let notice = store.loadFailureNotice {
                 Text(notice)

@@ -1,4 +1,3 @@
-import MenuDoPlugin
 import SwiftUI
 
 /// Backs the "commit on teardown" decision with a plain reference type
