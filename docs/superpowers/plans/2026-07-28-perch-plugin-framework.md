@@ -92,6 +92,8 @@ targets:
       properties:
         LSUIElement: true
         CFBundleDisplayName: Perch
+        CFBundleShortVersionString: "2.0"
+        CFBundleVersion: "2"
         LSApplicationCategoryType: public.app-category.productivity
         ITSAppUsesNonExemptEncryption: false
         NSHumanReadableCopyright: "© 2026 Prasanth Sasikumar"
@@ -108,18 +110,17 @@ targets:
       - target: Perch
 ```
 
-- [ ] **Step 3: Update `Perch/Info.plist`**
+- [ ] **Step 3: Confirm `Perch/Info.plist` regenerates correctly**
 
-Change two keys only:
+Do not hand-edit `Perch/Info.plist`. XcodeGen *generates* it from the `info.properties` block above, so any key you type into the file directly is discarded on the next `xcodegen generate` — which is why `CFBundleShortVersionString` and `CFBundleVersion` are declared in `project.yml` in Step 2 rather than here. (`MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` are build settings and do not populate the plist on their own.)
 
-```xml
-	<key>CFBundleDisplayName</key>
-	<string>Perch</string>
-	<key>CFBundleShortVersionString</key>
-	<string>2.0</string>
+After running `xcodegen generate` in Step 10, confirm:
+
+```bash
+grep -A1 "CFBundleShortVersionString\|CFBundleVersion\|CFBundleDisplayName" Perch/Info.plist
 ```
 
-and `CFBundleVersion` to `2`.
+Expected: `Perch`, `2.0`, and `2`.
 
 - [ ] **Step 4: Rename the app struct**
 
