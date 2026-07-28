@@ -3,3 +3,4 @@ build/
 Perch.xcodeproj/
 xcuserdata/
 .claude/
+.build/

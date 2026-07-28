@@ -10,6 +10,8 @@ packages:
   MenuBarExtraAccess:
     url: https://github.com/orchetect/MenuBarExtraAccess
     from: 1.0.0
+  PerchKit:
+    path: PerchKit
 targets:
   Perch:
     type: application
@@ -21,6 +23,8 @@ targets:
     dependencies:
       - package: KeyboardShortcuts
       - package: MenuBarExtraAccess
+      - package: PerchKit
+        product: PerchKit
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.ahlab.Perch
@@ -51,3 +55,5 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
     dependencies:
       - target: Perch
+      - package: PerchKit
+        product: PerchKit
