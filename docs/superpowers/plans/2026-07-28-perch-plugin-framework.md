@@ -2649,13 +2649,21 @@ Delete the old inline initialiser on the `registry` property.
 
 This is the step that determines whether tier 1 actually works. Do not skip it, and do not assume the answer.
 
-```bash
-# Fabricate a MenuDo 1.x container.
-mkdir -p ~/Library/Containers/org.ahlab.MenuDo/Data/Library/Application\ Support/MenuDo
-echo '[{"id":"11111111-1111-1111-1111-111111111111","title":"Imported task","isDone":false,"sortOrder":0,"createdAt":770000000}]' \
-  > ~/Library/Containers/org.ahlab.MenuDo/Data/Library/Application\ Support/MenuDo/tasks.json
+> **⚠️ Do not write anything into `~/Library/Containers/org.ahlab.MenuDo/`.** This machine has a real MenuDo container holding the maintainer's actual task list. An earlier draft of this step fabricated a `tasks.json` there with `echo >`, which would have destroyed real user data. The real container is *better* test input than a fabricated one anyway, and the importer copies rather than moves, so reading it is non-destructive.
+>
+> Verify the container exists and note what's in it, read-only:
+>
+> ```bash
+> cat ~/Library/Containers/org.ahlab.MenuDo/Data/Library/Application\ Support/MenuDo/tasks.json
+> ```
+>
+> If this machine has **no** such container, do not create one. Report that tier 1 is unverifiable here and let the `LegacyImporterTests` (which use temp directories) stand as the only evidence.
 
-# Clear any previous Perch state so the import is allowed to run.
+Only Perch's own container gets cleared — it is disposable, and clearing it is what lets the one-shot import run again:
+
+```bash
+# Clear Perch's own state so the import is allowed to run. Perch's container
+# only ever holds data this plan created; MenuDo's is left strictly alone.
 defaults delete org.ahlab.Perch 2>/dev/null
 rm -rf ~/Library/Containers/org.ahlab.Perch
 
@@ -2663,7 +2671,7 @@ xcodebuild -project Perch.xcodeproj -scheme Perch -configuration Debug -derivedD
 open build/Build/Products/Debug/Perch.app
 ```
 
-Expected: "Imported task" appears in the panel and in the menu bar.
+Expected: the tasks from the real MenuDo `tasks.json` appear in Perch's panel and its menu bar, **and the original file is still present and unmodified afterwards**. Check that second part explicitly — a migration that moves instead of copying would pass the first check and still be a data-loss bug.
 
 **Record the outcome in the commit message.** If the task does not appear, the entitlement did not grant access — that is exactly the risk the spec named, Task 13's manual fallback becomes the only path, and Step 5's entitlement should be reverted rather than shipped for nothing.
 
@@ -2855,7 +2863,7 @@ xcodebuild -project Perch.xcodeproj -scheme Perch -configuration Debug -derivedD
 open build/Build/Products/Debug/Perch.app
 ```
 
-With the fabricated MenuDo container from Task 12 still in place, confirm the notice appears at the top of the panel and dismisses. Then open Settings → General → Import from MenuDo… and confirm the open panel appears at the old container path.
+With the real MenuDo container still in place (never fabricate one — see Task 12 Step 7), confirm the notice appears at the top of the panel and dismisses. Then open Settings → General → Import from MenuDo… and confirm the open panel appears at the old container path. Do not select and import anything destructive; opening the panel and cancelling is the check.
 
 - [ ] **Step 7: Commit**
 
