@@ -5,17 +5,32 @@
 // Rendering the SF Symbol is also how the `bird` availability requirement
 // gets verified: if the symbol is missing on this macOS version, the script
 // fails loudly instead of the app silently showing a blank menu bar item.
+// Two names are checked, not one: `bird.fill`, which this script draws, and
+// plain `bird`, which is what PerchApp.swift falls back to in the menu bar
+// when no plugin contributes a label. The icon only proves the first; without
+// checking the second too, that fallback could go missing on some future
+// macOS version without this script ever noticing.
 //
 // Run: swift scripts/make_icon.swift
 import AppKit
 
 let symbolName = "bird.fill"
-guard let symbol = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil) else {
-    FileHandle.standardError.write(
-        Data("error: SF Symbol '\(symbolName)' is unavailable on this macOS version\n".utf8)
-    )
-    exit(1)
+let runtimeFallbackSymbolName = "bird"
+
+func requireSymbol(_ name: String) -> NSImage {
+    guard let symbol = NSImage(systemSymbolName: name, accessibilityDescription: nil) else {
+        FileHandle.standardError.write(
+            Data("error: SF Symbol '\(name)' is unavailable on this macOS version\n".utf8)
+        )
+        exit(1)
+    }
+    return symbol
 }
+
+let symbol = requireSymbol(symbolName)
+// Not used for drawing — this call exists solely to verify the app's runtime
+// fallback symbol still exists on this macOS version.
+_ = requireSymbol(runtimeFallbackSymbolName)
 
 // The exact pixel sizes Contents.json asks for, by filename.
 let sizes: [(filename: String, pixels: CGFloat)] = [

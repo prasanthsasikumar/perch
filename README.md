@@ -96,8 +96,8 @@ generated with [XcodeGen](https://github.com/yonaskolb/XcodeGen), so only
 
 ```bash
 brew install xcodegen
-git clone https://github.com/prasanthsasikumar/perch.git
-cd perch
+git clone https://github.com/prasanthsasikumar/menudo.git
+cd menudo
 xcodegen generate
 open Perch.xcodeproj
 ```
