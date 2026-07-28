@@ -1,106 +1,139 @@
-# MenuDo
+# Perch
 
-Your current task, always visible in the macOS menu bar.
+Small tools that live in your macOS menu bar.
 
-MenuDo keeps a single, simple todo list one click away. The task at the top of your list shows right in the menu bar, so what you should be doing next is always in front of you. Click it to add, complete, reorder, or delete tasks.
+Perch is a host. The tools themselves are plugins: today there's **Tasks**, the
+todo list Perch grew out of, which keeps your current task visible in the menu
+bar. More can be added without disturbing what's already there.
 
 ## Download
 
-Grab the latest `MenuDo.zip` from the [Releases page](../../releases/latest), unzip it, and drag `MenuDo.app` into your Applications folder.
+Grab the latest `Perch.zip` from the [Releases page](../../releases/latest),
+unzip it, and drag `Perch.app` into your Applications folder.
 
 Requires macOS 14 (Sonoma) or later. Apple Silicon and Intel are both supported.
 
 ### First launch
 
-This build is signed ad hoc rather than with a paid Apple Developer certificate, so macOS Gatekeeper will block it the first time. To open it:
+This build is signed ad hoc rather than with a paid Apple Developer certificate,
+so macOS Gatekeeper will block it the first time. To open it:
 
-1. Right click (or Control click) `MenuDo.app` and choose **Open**.
+1. Right click (or Control click) `Perch.app` and choose **Open**.
 2. Click **Open** again in the dialog that appears.
 
-You only need to do this once. If macOS still refuses, run this in Terminal and try again:
+You only need to do this once. If macOS still refuses, run this in Terminal and
+try again:
 
 ```bash
-xattr -dr com.apple.quarantine /Applications/MenuDo.app
+xattr -dr com.apple.quarantine /Applications/Perch.app
 ```
 
-A properly signed and notarized App Store build is planned, which will remove this step entirely.
+## Upgrading from MenuDo
 
-## Features
+Perch is MenuDo 1.x renamed and rebuilt as a plugin host. Your tasks and
+settings are carried across automatically the first time you launch it.
 
-- **Current task in the menu bar.** The first unfinished task on your list is always visible. Complete it and the next one takes its place.
-- **Quick add.** Open the dropdown, type, press Return.
-- **Edit in place.** Double-click a task to fix its title. Return saves, Escape cancels.
-- **Reorder by dragging.** Whatever you drag to the top becomes your current task.
-- **Done section.** Completed tasks collapse out of the way instead of disappearing. Clear them when you want.
-- **Global hotkey.** Set a shortcut in Settings to open the list and start typing from any app.
-- **Launch at login.** Toggle it on in Settings and MenuDo is there every morning.
-- **Adjustable display.** Show the task title or just the icon, and set how long a title can get before it truncates.
-
-## Settings
-
-Click the gear icon in the dropdown.
-
-| Setting | What it does |
-|---|---|
-| Show current task in menu bar | Switches between the task title and an icon only menu bar item |
-| Title length | How many characters of the title to show, from 10 to 60 |
-| Launch at login | Starts MenuDo automatically when you log in |
-| Open MenuDo | Records a global keyboard shortcut. None is set by default |
-
-## Your data
-
-Tasks are stored as plain JSON inside the app's own sandbox container, on your Mac only:
+macOS gives each app its own sandbox, so if the automatic import doesn't find
+your old data, open **Settings → General → Import from MenuDo…** and choose the
+old `tasks.json`. It lives at:
 
 ```
 ~/Library/Containers/org.ahlab.MenuDo/Data/Library/Application Support/MenuDo/tasks.json
 ```
 
-MenuDo has no network access, no accounts, no analytics, and no telemetry. Nothing you type leaves your machine. If that file is ever unreadable, MenuDo keeps a `.bak` copy beside it and tells you, rather than silently starting empty.
+Once your tasks are in Perch, **move `MenuDo.app` to the Trash**. Perch can't
+unregister MenuDo's launch-at-login entry, so until the old app is deleted both
+will start when you log in.
+
+## Plugins
+
+### Tasks
+
+- **Current task in the menu bar.** The first unfinished task is always visible.
+  Complete it and the next one takes its place.
+- **Quick add.** Open the panel, type, press Return.
+- **Edit in place.** Double-click a task to fix its title. Return saves, Escape
+  cancels.
+- **Reorder by dragging.** Whatever you drag to the top becomes your current task.
+- **Done section.** Completed tasks collapse out of the way instead of
+  disappearing. Clear them when you want.
+
+Tasks declares no capabilities: everything it stores stays on your Mac.
+
+## Settings
+
+Click the gear icon in the panel.
+
+| Pane | What's in it |
+|---|---|
+| General | Which plugin owns the menu bar, title display and length, launch at login, global hotkey, MenuDo import |
+| Plugins | Enable or disable each plugin, and see what each one can access |
+| Tasks | Per-plugin settings, when a plugin has any |
+
+## Your data
+
+Each plugin gets its own directory inside Perch's sandbox container, on your Mac
+only:
+
+```
+~/Library/Containers/org.ahlab.Perch/Data/Library/Application Support/Perch/Plugins/<plugin-id>/
+```
+
+Tasks stores a plain JSON file there and nothing else. If that file is ever
+unreadable, Perch keeps a `.bak` copy beside it and tells you, rather than
+silently starting empty.
+
+A note on how far that guarantee goes: macOS grants permissions to an app, not
+to individual plugins. Perch's Settings window discloses what each plugin does,
+but a permission any plugin needs is one the whole app carries. Every plugin
+that ships today declares nothing and touches the network never.
 
 ## Building from source
 
-MenuDo is a SwiftUI app built around `MenuBarExtra`. The Xcode project is generated with [XcodeGen](https://github.com/yonaskolb/XcodeGen), so only `project.yml` is tracked in git.
+Perch is a SwiftUI app built around `MenuBarExtra`. The Xcode project is
+generated with [XcodeGen](https://github.com/yonaskolb/XcodeGen), so only
+`project.yml` is tracked in git.
 
 ```bash
 brew install xcodegen
-git clone https://github.com/prasanthsasikumar/menudo.git
-cd menudo
+git clone https://github.com/prasanthsasikumar/perch.git
+cd perch
 xcodegen generate
-open MenuDo.xcodeproj
+open Perch.xcodeproj
 ```
 
 Run the tests with:
 
 ```bash
-xcodebuild test -project MenuDo.xcodeproj -scheme MenuDo -destination 'platform=macOS'
+xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=macOS'
 ```
 
 ### Layout
 
 ```
-MenuDo/
-  MenuDoApp.swift        MenuBarExtra scene and the menu bar label
-  Models/TodoItem.swift  The task model
-  Store/TaskStore.swift  Single source of truth, JSON persistence
-  Views/                 Dropdown list, task rows, settings
+PerchKit/                The public plugin API. Knows nothing about the host.
+Plugins/MenuDoPlugin/    The Tasks plugin: model, store, views
+Perch/
+  PerchApp.swift         MenuBarExtra scene, plugin instantiation
+  Host/                  Registry, panel chrome, menu bar label, MenuDo import
+  Views/                 Settings window
   Support/               Launch at login, hotkey state, title truncation
-MenuDoTests/             22 unit tests covering the store and helpers
+PerchTests/              Unit tests for the kit, the plugin, and the host
 ```
 
-Dependencies are [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts) for the sandbox safe global hotkey and [MenuBarExtraAccess](https://github.com/orchetect/MenuBarExtraAccess) for opening the dropdown programmatically.
+Dependencies are
+[KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts) for the
+sandbox-safe global hotkey and
+[MenuBarExtraAccess](https://github.com/orchetect/MenuBarExtraAccess) for opening
+the panel programmatically.
 
-## App Store submission checklist
+## Writing a plugin
 
-For maintainers preparing a store release:
+`PerchKit` is the contract. A plugin is a Swift package depending on it, with one
+type conforming to `PerchPlugin`, added to the array in `PerchApp.makePlugins()`.
 
-1. Replace the placeholder icon in `MenuDo/Resources/Assets.xcassets/AppIcon.appiconset` with final artwork.
-2. Confirm the app name is available on the App Store, and rename in `project.yml` if not.
-3. Set `DEVELOPMENT_TEAM: <TEAMID>` in `project.yml` and remove `CODE_SIGN_IDENTITY: "-"`, then regenerate.
-4. Create the App Store Connect record for bundle ID `org.ahlab.MenuDo`.
-5. Archive in Xcode, then Distribute App to App Store Connect.
-6. Privacy label is "Data Not Collected". Encryption is exempt, already declared in the Info.plist.
-7. Screenshots at 1280x800 or larger: dropdown with tasks in light and dark mode, plus the Settings window.
-8. Re-verify launch at login with the properly signed build.
+The API is **0.x and unstable** — it will change once a second plugin proves the
+shape is right. Plugins are compiled in rather than loaded at runtime.
 
 ## License
 

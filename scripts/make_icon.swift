@@ -1,26 +1,75 @@
-// Generates AppIcon.png (1024×1024): white checkmark on a blue rounded rect.
+// Generates every PNG the AppIcon.appiconset's Contents.json references: a
+// white bird on a teal rounded rect, rendered fresh at each pixel size rather
+// than resampled from one master, so small sizes stay crisp.
+//
+// Rendering the SF Symbol is also how the `bird` availability requirement
+// gets verified: if the symbol is missing on this macOS version, the script
+// fails loudly instead of the app silently showing a blank menu bar item.
+//
 // Run: swift scripts/make_icon.swift
 import AppKit
 
-let size = NSSize(width: 1024, height: 1024)
-let image = NSImage(size: size)
-image.lockFocus()
-NSColor(calibratedRed: 0.16, green: 0.42, blue: 0.95, alpha: 1).setFill()
-NSBezierPath(
-    roundedRect: NSRect(origin: .zero, size: size),
-    xRadius: 184,
-    yRadius: 184
-).fill()
-let attributes: [NSAttributedString.Key: Any] = [
-    .font: NSFont.systemFont(ofSize: 620, weight: .bold),
-    .foregroundColor: NSColor.white,
-]
-let mark = NSAttributedString(string: "✓", attributes: attributes)
-let bounds = mark.size()
-mark.draw(at: NSPoint(x: (1024 - bounds.width) / 2, y: (1024 - bounds.height) / 2))
-image.unlockFocus()
+let symbolName = "bird.fill"
+guard let symbol = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil) else {
+    FileHandle.standardError.write(
+        Data("error: SF Symbol '\(symbolName)' is unavailable on this macOS version\n".utf8)
+    )
+    exit(1)
+}
 
-let tiff = image.tiffRepresentation!
-let png = NSBitmapImageRep(data: tiff)!.representation(using: .png, properties: [:])!
-try! png.write(to: URL(fileURLWithPath: "AppIcon.png"))
-print("Wrote AppIcon.png")
+// The exact pixel sizes Contents.json asks for, by filename.
+let sizes: [(filename: String, pixels: CGFloat)] = [
+    ("icon_16.png", 16),
+    ("icon_32.png", 32),
+    ("icon_64.png", 64),
+    ("icon_128.png", 128),
+    ("icon_256.png", 256),
+    ("icon_512.png", 512),
+    ("icon_1024.png", 1024),
+]
+
+func renderIcon(pixels: CGFloat) -> NSImage {
+    let size = NSSize(width: pixels, height: pixels)
+    let image = NSImage(size: size)
+    image.lockFocus()
+
+    NSColor(calibratedRed: 0.11, green: 0.51, blue: 0.51, alpha: 1).setFill()
+    NSBezierPath(
+        roundedRect: NSRect(origin: .zero, size: size),
+        xRadius: pixels * (184.0 / 1024.0),
+        yRadius: pixels * (184.0 / 1024.0)
+    ).fill()
+
+    let configuration = NSImage.SymbolConfiguration(pointSize: pixels * 0.5469, weight: .medium)
+        .applying(.init(paletteColors: [.white]))
+    let glyph = symbol.withSymbolConfiguration(configuration) ?? symbol
+    let glyphSize = glyph.size
+    glyph.draw(
+        in: NSRect(
+            x: (size.width - glyphSize.width) / 2,
+            y: (size.height - glyphSize.height) / 2,
+            width: glyphSize.width,
+            height: glyphSize.height
+        )
+    )
+
+    image.unlockFocus()
+    return image
+}
+
+let outputDirectory = URL(fileURLWithPath: "Perch/Resources/Assets.xcassets/AppIcon.appiconset")
+
+for (filename, pixels) in sizes {
+    let image = renderIcon(pixels: pixels)
+    guard
+        let tiff = image.tiffRepresentation,
+        let bitmap = NSBitmapImageRep(data: tiff),
+        let png = bitmap.representation(using: .png, properties: [:])
+    else {
+        FileHandle.standardError.write(Data("error: failed to render \(filename)\n".utf8))
+        exit(1)
+    }
+    let destination = outputDirectory.appendingPathComponent(filename)
+    try! png.write(to: destination)
+    print("Wrote \(destination.path)")
+}
