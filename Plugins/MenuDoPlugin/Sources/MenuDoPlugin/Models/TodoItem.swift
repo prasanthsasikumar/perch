@@ -1,13 +1,13 @@
 import Foundation
 
-struct TodoItem: Identifiable, Codable, Equatable {
-    let id: UUID
-    var title: String
-    var isDone: Bool
-    var sortOrder: Int
-    let createdAt: Date
+public struct TodoItem: Identifiable, Codable, Equatable {
+    public let id: UUID
+    public var title: String
+    public var isDone: Bool
+    public var sortOrder: Int
+    public let createdAt: Date
 
-    init(
+    public init(
         id: UUID = UUID(),
         title: String,
         isDone: Bool = false,

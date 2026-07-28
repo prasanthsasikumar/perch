@@ -12,6 +12,8 @@ packages:
     from: 1.0.0
   PerchKit:
     path: PerchKit
+  MenuDoPlugin:
+    path: Plugins/MenuDoPlugin
 targets:
   Perch:
     type: application
@@ -25,6 +27,8 @@ targets:
       - package: MenuBarExtraAccess
       - package: PerchKit
         product: PerchKit
+      - package: MenuDoPlugin
+        product: MenuDoPlugin
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.ahlab.Perch
@@ -57,3 +61,5 @@ targets:
       - target: Perch
       - package: PerchKit
         product: PerchKit
+      - package: MenuDoPlugin
+        product: MenuDoPlugin

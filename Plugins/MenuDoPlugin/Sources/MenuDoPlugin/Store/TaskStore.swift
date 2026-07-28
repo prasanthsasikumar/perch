@@ -1,24 +1,21 @@
 import AppKit
 import Foundation
 import Observation
+import PerchKit
 
 @MainActor
 @Observable
-final class TaskStore {
-    private(set) var items: [TodoItem] = []
-    private(set) var loadFailureNotice: String?
+public final class TaskStore {
+    public private(set) var items: [TodoItem] = []
+    public private(set) var loadFailureNotice: String?
 
-    private let fileURL: URL
+    private let storage: PluginStorage
+    private let filename: String
     @ObservationIgnored private var pendingSave: Task<Void, Never>?
 
-    nonisolated static var defaultFileURL: URL {
-        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Perch", isDirectory: true)
-            .appendingPathComponent("tasks.json")
-    }
-
-    init(fileURL: URL = TaskStore.defaultFileURL) {
-        self.fileURL = fileURL
+    public init(storage: PluginStorage, filename: String = "tasks.json") {
+        self.storage = storage
+        self.filename = filename
         load()
         NotificationCenter.default.addObserver(
             forName: NSApplication.willTerminateNotification, object: nil, queue: .main
@@ -29,19 +26,19 @@ final class TaskStore {
 
     // MARK: - Derived state
 
-    var pending: [TodoItem] {
+    public var pending: [TodoItem] {
         items.filter { !$0.isDone }.sorted { $0.sortOrder < $1.sortOrder }
     }
 
-    var done: [TodoItem] {
+    public var done: [TodoItem] {
         items.filter(\.isDone).sorted { $0.sortOrder < $1.sortOrder }
     }
 
-    var currentTask: TodoItem? { pending.first }
+    public var currentTask: TodoItem? { pending.first }
 
     // MARK: - Mutations
 
-    func add(_ title: String) {
+    public func add(_ title: String) {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         let nextOrder = (items.map(\.sortOrder).max() ?? -1) + 1
@@ -49,18 +46,18 @@ final class TaskStore {
         scheduleSave()
     }
 
-    func toggle(_ id: UUID) {
+    public func toggle(_ id: UUID) {
         guard let index = items.firstIndex(where: { $0.id == id }) else { return }
         items[index].isDone.toggle()
         scheduleSave()
     }
 
-    func delete(_ id: UUID) {
+    public func delete(_ id: UUID) {
         items.removeAll { $0.id == id }
         scheduleSave()
     }
 
-    func rename(_ id: UUID, to title: String) {
+    public func rename(_ id: UUID, to title: String) {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         guard let index = items.firstIndex(where: { $0.id == id }) else { return }
@@ -68,7 +65,7 @@ final class TaskStore {
         scheduleSave()
     }
 
-    func movePending(fromOffsets source: IndexSet, toOffset destination: Int) {
+    public func movePending(fromOffsets source: IndexSet, toOffset destination: Int) {
         var reordered = pending
         reordered.move(fromOffsets: source, toOffset: destination)
         var order = 0
@@ -87,38 +84,23 @@ final class TaskStore {
         scheduleSave()
     }
 
-    func clearCompleted() {
+    public func clearCompleted() {
         items.removeAll { $0.isDone }
         scheduleSave()
     }
 
     // MARK: - Persistence
 
-    func saveNow() {
+    public func saveNow() {
         pendingSave?.cancel()
-        do {
-            try FileManager.default.createDirectory(
-                at: fileURL.deletingLastPathComponent(),
-                withIntermediateDirectories: true
-            )
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            let data = try encoder.encode(items)
-            try data.write(to: fileURL, options: .atomic)
-        } catch {
-            // In-memory state stays authoritative; the next mutation retries via scheduleSave().
-        }
+        // In-memory state stays authoritative; the next mutation retries via scheduleSave().
+        try? storage.save(items, named: filename)
     }
 
     private func load() {
-        guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
         do {
-            let data = try Data(contentsOf: fileURL)
-            items = try JSONDecoder().decode([TodoItem].self, from: data)
+            items = try storage.load([TodoItem].self, named: filename) ?? []
         } catch {
-            let backupURL = fileURL.appendingPathExtension("bak")
-            try? FileManager.default.removeItem(at: backupURL)
-            try? FileManager.default.copyItem(at: fileURL, to: backupURL)
             items = []
             loadFailureNotice = "Couldn't read saved tasks — backup kept"
         }

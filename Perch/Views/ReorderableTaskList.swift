@@ -1,3 +1,4 @@
+import MenuDoPlugin
 import SwiftUI
 
 /// Collects the measured height of every row, keyed by task id.

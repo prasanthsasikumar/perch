@@ -11,13 +11,13 @@ import Foundation
 ///
 /// Rows are not assumed to be the same height — titles wrap to two lines — so
 /// every calculation works off measured per-row heights.
-enum DragReorder {
+public enum DragReorder {
     /// The index a row dragged `translation` points vertically would land on.
     ///
     /// A row is only displaced once the drag passes the halfway mark of the
     /// neighbour it is crossing, which keeps small jitters from reordering the
     /// list. The result is clamped to the bounds of the list.
-    static func targetIndex(
+    public static func targetIndex(
         sourceIndex: Int,
         translation: CGFloat,
         rowHeights: [CGFloat]
@@ -55,7 +55,7 @@ enum DragReorder {
     ///
     /// `toOffset` is interpreted against the array *before* removal, so moving
     /// downward needs one extra slot to account for the row itself.
-    static func moveOffsets(from sourceIndex: Int, to targetIndex: Int) -> (IndexSet, Int)? {
+    public static func moveOffsets(from sourceIndex: Int, to targetIndex: Int) -> (IndexSet, Int)? {
         guard sourceIndex != targetIndex else { return nil }
         let destination = targetIndex > sourceIndex ? targetIndex + 1 : targetIndex
         return (IndexSet(integer: sourceIndex), destination)
@@ -64,7 +64,7 @@ enum DragReorder {
     /// Vertical offset to apply to a row that is *not* being dragged, so the
     /// list visibly opens a gap where the dragged row will land. Rows between
     /// the source and the target slide by the dragged row's own height.
-    static func displacement(
+    public static func displacement(
         forIndex index: Int,
         sourceIndex: Int,
         targetIndex: Int,

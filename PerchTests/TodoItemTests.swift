@@ -1,5 +1,5 @@
 import XCTest
-@testable import Perch
+import MenuDoPlugin
 
 final class TodoItemTests: XCTestCase {
     func testDefaults() {

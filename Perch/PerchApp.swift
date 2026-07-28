@@ -1,9 +1,15 @@
 import MenuBarExtraAccess
+import MenuDoPlugin
+import PerchKit
 import SwiftUI
 
 @main
 struct PerchApp: App {
-    @State private var store = TaskStore()
+    @State private var store = TaskStore(
+        storage: PluginContext.standard(
+            appName: "Perch", identifier: "org.ahlab.perch.menudo"
+        ).storage
+    )
     @State private var appState = AppState()
     @AppStorage("showTitleInMenuBar") private var showTitleInMenuBar = true
     @AppStorage("titleTruncationLength") private var titleTruncationLength = 30

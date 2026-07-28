@@ -1,17 +1,16 @@
+import MenuDoPlugin
+import PerchKit
 import XCTest
-@testable import Perch
 
 @MainActor
 final class TaskStoreLogicTests: XCTestCase {
-    private var fileURL: URL!
     private var store: TaskStore!
 
     override func setUp() {
         super.setUp()
-        let dir = FileManager.default.temporaryDirectory
+        let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("PerchTests-\(UUID().uuidString)", isDirectory: true)
-        fileURL = dir.appendingPathComponent("tasks.json")
-        store = TaskStore(fileURL: fileURL)
+        store = TaskStore(storage: PluginStorage(directory: directory))
     }
 
     func testAddAppendsTrimmedPendingTask() {
