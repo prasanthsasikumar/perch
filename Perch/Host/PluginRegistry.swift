@@ -30,7 +30,7 @@ final class PluginRegistry {
 
     private var enabledIDs: Set<String> {
         didSet {
-            defaults.set(Array(enabledIDs), forKey: Key.enabled)
+            persistEnabledIDs()
             reconcileSelections()
         }
     }
@@ -65,6 +65,14 @@ final class PluginRegistry {
         }
         activeID = defaults.string(forKey: Key.active).flatMap { known.contains($0) ? $0 : nil }
         primaryID = defaults.string(forKey: Key.primary).flatMap { known.contains($0) ? $0 : nil }
+
+        // Swift suppresses `didSet` for the assignments directly above, since
+        // they're written in this initializer's own body — so, unlike
+        // `activeID`/`primaryID` below (which get reassigned from inside
+        // `reconcileSelections`, a genuine method call, and so persist via
+        // their own `didSet`), `enabledIDs` needs an explicit write here to
+        // keep all three defaults keys populated after a fresh install.
+        persistEnabledIDs()
         reconcileSelections()
     }
 
@@ -97,6 +105,10 @@ final class PluginRegistry {
         } else {
             enabledIDs.remove(id)
         }
+    }
+
+    private func persistEnabledIDs() {
+        defaults.set(Array(enabledIDs), forKey: Key.enabled)
     }
 
     /// Keeps the stored selections pointing at something real, so a disabled

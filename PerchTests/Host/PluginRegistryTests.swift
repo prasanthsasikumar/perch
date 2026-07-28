@@ -117,6 +117,13 @@ final class PluginRegistryTests: XCTestCase {
         XCTAssertEqual(reloaded.active?.id, "beta")
     }
 
+    func testEnabledPluginIDsIsPersistedOnFreshInstall() {
+        _ = makeRegistry()
+        let stored = suite.array(forKey: "enabledPluginIDs") as? [String]
+        XCTAssertNotNil(stored)
+        XCTAssertEqual(Set(stored ?? []), ["alpha", "beta"])
+    }
+
     func testAPersistedIDForAPluginThatNoLongerExistsIsIgnored() {
         suite.set(["alpha", "gamma"], forKey: "enabledPluginIDs")
         suite.set("gamma", forKey: "activePluginID")
