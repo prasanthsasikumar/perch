@@ -1,4 +1,4 @@
-name: MenuDo
+name: Perch
 options:
   createIntermediateGroups: true
   deploymentTarget:
@@ -11,41 +11,43 @@ packages:
     url: https://github.com/orchetect/MenuBarExtraAccess
     from: 1.0.0
 targets:
-  MenuDo:
+  Perch:
     type: application
     platform: macOS
     sources:
-      - MenuDo
-      - path: MenuDo/Resources
+      - Perch
+      - path: Perch/Resources
         buildPhase: resources
     dependencies:
       - package: KeyboardShortcuts
       - package: MenuBarExtraAccess
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: org.ahlab.MenuDo
-        CODE_SIGN_ENTITLEMENTS: MenuDo/MenuDo.entitlements
+        PRODUCT_BUNDLE_IDENTIFIER: org.ahlab.Perch
+        CODE_SIGN_ENTITLEMENTS: Perch/Perch.entitlements
         CODE_SIGN_IDENTITY: "-"
         ENABLE_HARDENED_RUNTIME: YES
-        MARKETING_VERSION: "1.0"
-        CURRENT_PROJECT_VERSION: "1"
+        MARKETING_VERSION: "2.0"
+        CURRENT_PROJECT_VERSION: "2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     info:
-      path: MenuDo/Info.plist
+      path: Perch/Info.plist
       properties:
         LSUIElement: true
-        CFBundleDisplayName: MenuDo
+        CFBundleDisplayName: Perch
+        CFBundleShortVersionString: "2.0"
+        CFBundleVersion: "2"
         LSApplicationCategoryType: public.app-category.productivity
         ITSAppUsesNonExemptEncryption: false
         NSHumanReadableCopyright: "© 2026 Prasanth Sasikumar"
     scheme:
-      testTargets: [MenuDoTests]
-  MenuDoTests:
+      testTargets: [PerchTests]
+  PerchTests:
     type: bundle.unit-test
     platform: macOS
-    sources: [MenuDoTests]
+    sources: [PerchTests]
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
     dependencies:
-      - target: MenuDo
+      - target: Perch

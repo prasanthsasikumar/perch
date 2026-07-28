@@ -34,7 +34,7 @@ struct SettingsView: View {
                         let actual = LaunchAtLogin.isEnabled
                         if actual != newValue {
                             if newValue && LaunchAtLogin.status == .requiresApproval {
-                                launchAtLoginError = "Approval needed: enable MenuDo in System Settings → General → Login Items."
+                                launchAtLoginError = "Approval needed: enable Perch in System Settings → General → Login Items."
                             }
                             launchAtLogin = actual
                         }
@@ -44,7 +44,7 @@ struct SettingsView: View {
                         .font(.caption)
                         .foregroundStyle(.red)
                 }
-                KeyboardShortcuts.Recorder("Open MenuDo:", name: .openMenuDo)
+                KeyboardShortcuts.Recorder("Open Perch:", name: .openPerch)
             }
         }
         .formStyle(.grouped)

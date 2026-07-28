@@ -1,5 +1,5 @@
 import XCTest
-@testable import MenuDo
+@testable import Perch
 
 @MainActor
 final class TaskStoreLogicTests: XCTestCase {
@@ -9,7 +9,7 @@ final class TaskStoreLogicTests: XCTestCase {
     override func setUp() {
         super.setUp()
         let dir = FileManager.default.temporaryDirectory
-            .appendingPathComponent("MenuDoTests-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("PerchTests-\(UUID().uuidString)", isDirectory: true)
         fileURL = dir.appendingPathComponent("tasks.json")
         store = TaskStore(fileURL: fileURL)
     }

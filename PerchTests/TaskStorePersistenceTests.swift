@@ -1,5 +1,5 @@
 import XCTest
-@testable import MenuDo
+@testable import Perch
 
 @MainActor
 final class TaskStorePersistenceTests: XCTestCase {
@@ -8,7 +8,7 @@ final class TaskStorePersistenceTests: XCTestCase {
     override func setUp() {
         super.setUp()
         let dir = FileManager.default.temporaryDirectory
-            .appendingPathComponent("MenuDoTests-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("PerchTests-\(UUID().uuidString)", isDirectory: true)
         try! FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         fileURL = dir.appendingPathComponent("tasks.json")
     }

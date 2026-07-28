@@ -80,8 +80,8 @@ struct TaskListView: View {
                 } label: {
                     Image(systemName: "power")
                 }
-                .help("Quit MenuDo")
-                .accessibilityLabel("Quit MenuDo")
+                .help("Quit Perch")
+                .accessibilityLabel("Quit Perch")
             }
             .buttonStyle(.borderless)
             .padding(12)

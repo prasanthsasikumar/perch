@@ -2,7 +2,7 @@ import MenuBarExtraAccess
 import SwiftUI
 
 @main
-struct MenuDoApp: App {
+struct PerchApp: App {
     @State private var store = TaskStore()
     @State private var appState = AppState()
     @AppStorage("showTitleInMenuBar") private var showTitleInMenuBar = true

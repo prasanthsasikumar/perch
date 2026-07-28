@@ -1,5 +1,5 @@
 import XCTest
-@testable import MenuDo
+@testable import Perch
 
 final class DragReorderTests: XCTestCase {
     /// Five uniform rows, the common case.
