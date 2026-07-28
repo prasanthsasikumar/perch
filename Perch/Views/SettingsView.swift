@@ -1,56 +1,42 @@
-import KeyboardShortcuts
 import SwiftUI
 
 struct SettingsView: View {
-    let registry: PluginRegistry
+    @Bindable var registry: PluginRegistry
 
-    @AppStorage("showTitleInMenuBar") private var showTitleInMenuBar = true
-    @AppStorage("titleTruncationLength") private var titleTruncationLength = 30
-    @State private var launchAtLogin = LaunchAtLogin.isEnabled
-    @State private var launchAtLoginError: String?
+    private enum Pane: Hashable {
+        case general
+        case plugins
+        case plugin(String)
+    }
+
+    @State private var selection: Pane = .general
 
     var body: some View {
-        Form {
-            Section("Menu bar") {
-                Toggle("Show current task in menu bar", isOn: $showTitleInMenuBar)
-                Stepper(
-                    "Title length: \(titleTruncationLength) characters",
-                    value: $titleTruncationLength,
-                    in: 10...60,
-                    step: 5
-                )
-                .disabled(!showTitleInMenuBar)
-            }
-
-            Section("General") {
-                Toggle("Launch at login", isOn: $launchAtLogin)
-                    .onChange(of: launchAtLogin) { _, newValue in
-                        // Re-fired by the resync below; actual state already matches.
-                        guard newValue != LaunchAtLogin.isEnabled else { return }
-                        do {
-                            try LaunchAtLogin.set(newValue)
-                            launchAtLoginError = nil
-                        } catch {
-                            launchAtLoginError = error.localizedDescription
-                        }
-                        let actual = LaunchAtLogin.isEnabled
-                        if actual != newValue {
-                            if newValue && LaunchAtLogin.status == .requiresApproval {
-                                launchAtLoginError = "Approval needed: enable Perch in System Settings → General → Login Items."
-                            }
-                            launchAtLogin = actual
-                        }
-                    }
-                if let launchAtLoginError {
-                    Text(launchAtLoginError)
-                        .font(.caption)
-                        .foregroundStyle(.red)
+        NavigationSplitView {
+            List(selection: $selection) {
+                Label("General", systemImage: "gearshape").tag(Pane.general)
+                Label("Plugins", systemImage: "puzzlepiece.extension").tag(Pane.plugins)
+                ForEach(registry.enabled) { entry in
+                    Label(entry.displayName, systemImage: entry.icon).tag(Pane.plugin(entry.id))
                 }
-                KeyboardShortcuts.Recorder("Open Perch:", name: .openPerch)
+            }
+            .navigationSplitViewColumnWidth(180)
+        } detail: {
+            switch selection {
+            case .general:
+                GeneralSettingsView(registry: registry)
+            case .plugins:
+                PluginsSettingsView(registry: registry)
+            case .plugin(let id):
+                if let entry = registry.enabled.first(where: { $0.id == id }) {
+                    entry.plugin.settings
+                } else {
+                    // The plugin was disabled while its pane was showing.
+                    Text("This plugin is disabled")
+                        .foregroundStyle(.secondary)
+                }
             }
         }
-        .formStyle(.grouped)
-        .frame(width: 380)
-        .fixedSize()
+        .frame(width: 640, height: 420)
     }
 }
