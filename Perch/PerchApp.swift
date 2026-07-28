@@ -5,10 +5,15 @@ import SwiftUI
 
 @main
 struct PerchApp: App {
-    @State private var registry = PluginRegistry(plugins: PerchApp.makePlugins())
+    @State private var registry: PluginRegistry
     @State private var appState = AppState()
     @AppStorage("showTitleInMenuBar") private var showTitleInMenuBar = true
     @AppStorage("titleTruncationLength") private var titleTruncationLength = 30
+
+    init() {
+        LegacyImporter.runIfNeeded()
+        _registry = State(initialValue: PluginRegistry(plugins: PerchApp.makePlugins()))
+    }
 
     /// The one place in Perch that names a concrete plugin.
     private static func makePlugins() -> [any PerchPlugin] {
