@@ -5,35 +5,55 @@ import SwiftUI
 
 @main
 struct PerchApp: App {
-    @State private var store = TaskStore(
-        storage: PluginContext.standard(
-            appName: "Perch", identifier: "org.ahlab.perch.menudo"
-        ).storage
-    )
+    @State private var registry = PluginRegistry(plugins: PerchApp.makePlugins())
     @State private var appState = AppState()
     @AppStorage("showTitleInMenuBar") private var showTitleInMenuBar = true
     @AppStorage("titleTruncationLength") private var titleTruncationLength = 30
+
+    /// The one place in Perch that names a concrete plugin.
+    private static func makePlugins() -> [any PerchPlugin] {
+        [
+            MenuDo(context: .standard(appName: "Perch", identifier: MenuDo.identifier))
+        ]
+    }
 
     var body: some Scene {
         @Bindable var appState = appState
 
         MenuBarExtra {
-            TaskListView(store: store)
+            PanelView(registry: registry)
         } label: {
-            if showTitleInMenuBar, let current = store.currentTask {
-                HStack(spacing: 4) {
-                    Image(systemName: "checkmark.circle")
-                    Text(current.title.truncatedForMenuBar(to: titleTruncationLength))
-                }
-            } else {
-                Image(systemName: "checkmark.circle")
-            }
+            menuBarContent(
+                MenuBarLabelResolver.resolve(
+                    primary: registry.primary?.plugin.menuBarLabel,
+                    showTitle: showTitleInMenuBar,
+                    truncationLength: titleTruncationLength
+                )
+            )
         }
         .menuBarExtraAccess(isPresented: $appState.isMenuPresented)
         .menuBarExtraStyle(.window)
 
         Settings {
-            SettingsView()
+            SettingsView(registry: registry)
+        }
+    }
+
+    /// `nil` means no enabled plugin contributed a label, so Perch shows its
+    /// own mark rather than an empty menu bar item.
+    @ViewBuilder
+    private func menuBarContent(_ label: MenuBarLabel?) -> some View {
+        if let label {
+            if let text = label.text {
+                HStack(spacing: 4) {
+                    Image(systemName: label.systemImage)
+                    Text(text)
+                }
+            } else {
+                Image(systemName: label.systemImage)
+            }
+        } else {
+            Image(systemName: "bird")
         }
     }
 }

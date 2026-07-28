@@ -6,7 +6,6 @@ public struct TaskListView: View {
     @State private var showDone = false
     @State private var editingID: UUID?
     @FocusState private var addFieldFocused: Bool
-    @Environment(\.openSettings) private var openSettings
 
     public init(store: TaskStore) {
         self.store = store
@@ -59,38 +58,7 @@ public struct TaskListView: View {
                 }
                 .frame(minHeight: 120, maxHeight: 360)
             }
-
-            Divider()
-
-            HStack {
-                if !store.done.isEmpty {
-                    Button("Clear completed") { store.clearCompleted() }
-                }
-                Spacer()
-                Button {
-                    // A menu bar only (LSUIElement) app is not active when its
-                    // dropdown is clicked, so Settings would open behind the
-                    // frontmost app unless we activate first.
-                    NSApp.activate(ignoringOtherApps: true)
-                    openSettings()
-                } label: {
-                    Image(systemName: "gearshape")
-                }
-                .help("Settings")
-                .accessibilityLabel("Settings")
-                Button {
-                    store.saveNow()
-                    NSApp.terminate(nil)
-                } label: {
-                    Image(systemName: "power")
-                }
-                .help("Quit Perch")
-                .accessibilityLabel("Quit Perch")
-            }
-            .buttonStyle(.borderless)
-            .padding(12)
         }
-        .frame(width: 320)
         .onAppear { addFieldFocused = true }
     }
 }

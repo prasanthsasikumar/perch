@@ -2,6 +2,8 @@ import KeyboardShortcuts
 import SwiftUI
 
 struct SettingsView: View {
+    let registry: PluginRegistry
+
     @AppStorage("showTitleInMenuBar") private var showTitleInMenuBar = true
     @AppStorage("titleTruncationLength") private var titleTruncationLength = 30
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
