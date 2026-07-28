@@ -188,7 +188,13 @@ In `Perch/Store/TaskStore.swift`, `defaultFileURL` still says `"MenuDo"`. Change
 
 - [ ] **Step 8: Update test imports**
 
-In every file under `PerchTests/`, replace `@testable import MenuDo` with `@testable import Perch`. Files affected: `DragReorderTests.swift`, `StringTruncationTests.swift`, `TaskStoreLogicTests.swift`, `TaskStorePersistenceTests.swift`, `TodoItemTests.swift`. (`SmokeTests.swift` has no import.)
+In every file under `PerchTests/`, replace `@testable import MenuDo` with `@testable import Perch`. Files affected: `DragReorderTests.swift`, `StringTruncationTests.swift`, `TaskStoreLogicTests.swift`, `TaskStorePersistenceTests.swift`, `TodoItemTests.swift`.
+
+Also delete `PerchTests/SmokeTests.swift` entirely — its single test asserts `XCTAssertTrue(true)`, which proved the harness ran back when there was nothing else to run. With 46 real tests it earns nothing:
+
+```bash
+git rm PerchTests/SmokeTests.swift
+```
 
 Also update the temp-directory prefixes in `TaskStoreLogicTests.swift` and `TaskStorePersistenceTests.swift`:
 
@@ -3116,4 +3122,4 @@ git push
 
 - **The acceptance criterion for the whole plan** is that a MenuDo 1.x user upgrading to Perch sees no difference: same menu bar text, same 320pt panel with no tab strip, same tasks. If any task breaks that, the task is wrong, not the criterion.
 - **Task 12 Step 7 is a real experiment, not a formality.** The spec explicitly flags that the temporary-exception entitlement may not grant access to another app's container. Report what actually happened.
-- Do not add hooks, extension points, or capabilities to `PerchKit` that no current plugin uses. The Google Analytics plugin gets its own spec, and guessing its needs now is how the protocol ends up the wrong shape.
+- Do not add hooks, extension points, or capabilities to `PerchKit` beyond what this plan's tasks specify. The Google Analytics plugin gets its own spec, and guessing its needs now is how the protocol ends up the wrong shape. (`PluginDefaults` and `PluginCapability` have no consumer in MenuDo and are still in scope — the approved spec calls for both, one to prevent key collisions and one to drive the Settings disclosure. That ruling is made; do not re-litigate it, and do not extend it to anything else.)
