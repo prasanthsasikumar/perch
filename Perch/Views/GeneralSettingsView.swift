@@ -1,8 +1,12 @@
+import AppKit
 import KeyboardShortcuts
+import PerchKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct GeneralSettingsView: View {
     @Bindable var registry: PluginRegistry
+    @Bindable var migration: MigrationState
 
     @AppStorage("showTitleInMenuBar") private var showTitleInMenuBar = true
     @AppStorage("titleTruncationLength") private var titleTruncationLength = 30
@@ -57,7 +61,41 @@ struct GeneralSettingsView: View {
                 }
                 KeyboardShortcuts.Recorder("Open Perch:", name: .openPerch)
             }
+
+            Section("Migration") {
+                Button("Import from MenuDo…") { importFromMenuDo() }
+                Text(
+                    "Only needed if your tasks didn't carry over from MenuDo 1.x. "
+                    + "Choose the old tasks.json when prompted."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
         }
         .formStyle(.grouped)
+    }
+
+    /// The fallback for when the sandbox refuses the automatic import. The
+    /// user picking the file is itself the consent that grants read access, so
+    /// this path works with no entitlement at all.
+    private func importFromMenuDo() {
+        let panel = NSOpenPanel()
+        panel.title = "Import from MenuDo"
+        panel.prompt = "Import"
+        panel.allowedContentTypes = [.json]
+        panel.directoryURL = LegacyImporter.legacyTasksURL.deletingLastPathComponent()
+        panel.canChooseDirectories = false
+        NSApp.activate(ignoringOtherApps: true)
+        guard panel.runModal() == .OK, let source = panel.url else { return }
+
+        let destination = PluginContext
+            .standard(appName: "Perch", identifier: "org.ahlab.perch.menudo")
+            .storage
+            .url(named: "tasks.json")
+        if LegacyImporter.importTasks(from: source, to: destination) {
+            migration.notice = "Imported. Relaunch Perch to see your tasks."
+        } else {
+            migration.notice = "Nothing imported — Perch already has tasks saved."
+        }
     }
 }

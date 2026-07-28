@@ -6,13 +6,17 @@ import SwiftUI
 @main
 struct PerchApp: App {
     @State private var registry: PluginRegistry
+    @State private var migration = MigrationState()
     @State private var appState = AppState()
     @AppStorage("showTitleInMenuBar") private var showTitleInMenuBar = true
     @AppStorage("titleTruncationLength") private var titleTruncationLength = 30
 
     init() {
-        LegacyImporter.runIfNeeded()
+        let result = LegacyImporter.runIfNeeded()
         _registry = State(initialValue: PluginRegistry(plugins: PerchApp.makePlugins()))
+        let state = MigrationState()
+        if result.importedTasks { state.notice = MigrationState.importedNotice }
+        _migration = State(initialValue: state)
     }
 
     /// The one place in Perch that names a concrete plugin.
@@ -26,7 +30,7 @@ struct PerchApp: App {
         @Bindable var appState = appState
 
         MenuBarExtra {
-            PanelView(registry: registry)
+            PanelView(registry: registry, migration: migration)
         } label: {
             menuBarContent(
                 MenuBarLabelResolver.resolve(
@@ -40,7 +44,7 @@ struct PerchApp: App {
         .menuBarExtraStyle(.window)
 
         Settings {
-            SettingsView(registry: registry)
+            SettingsView(registry: registry, migration: migration)
         }
     }
 

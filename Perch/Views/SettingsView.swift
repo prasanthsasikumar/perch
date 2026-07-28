@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Bindable var registry: PluginRegistry
+    @Bindable var migration: MigrationState
 
     private enum Pane: Hashable {
         case general
@@ -24,7 +25,7 @@ struct SettingsView: View {
         } detail: {
             switch selection {
             case .general:
-                GeneralSettingsView(registry: registry)
+                GeneralSettingsView(registry: registry, migration: migration)
             case .plugins:
                 PluginsSettingsView(registry: registry)
             case .plugin(let id):
