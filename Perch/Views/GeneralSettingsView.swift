@@ -92,10 +92,17 @@ struct GeneralSettingsView: View {
             .standard(appName: "Perch", identifier: "org.ahlab.perch.menudo")
             .storage
             .url(named: "tasks.json")
-        if LegacyImporter.importTasks(from: source, to: destination) {
+        switch LegacyImporter.importTasksOutcome(from: source, to: destination) {
+        case .imported:
             migration.notice = "Imported. Relaunch Perch to see your tasks."
-        } else {
+        case .alreadyHasData:
             migration.notice = "Nothing imported — Perch already has tasks saved."
+        case .nothingToImport:
+            migration.notice = "That file couldn't be read — choose the tasks.json file again."
+        case .failed:
+            migration.notice =
+                "Import failed — something went wrong copying that file. "
+                + "Check that Perch can read it and try again."
         }
     }
 }

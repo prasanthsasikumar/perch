@@ -6,7 +6,7 @@ import SwiftUI
 @main
 struct PerchApp: App {
     @State private var registry: PluginRegistry
-    @State private var migration = MigrationState()
+    @State private var migration: MigrationState
     @State private var appState = AppState()
     @AppStorage("showTitleInMenuBar") private var showTitleInMenuBar = true
     @AppStorage("titleTruncationLength") private var titleTruncationLength = 30

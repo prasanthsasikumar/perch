@@ -102,6 +102,49 @@ final class LegacyImporterTests: XCTestCase {
         XCTAssertTrue(performImport().importedTasks)
     }
 
+    func testOutcomeDistinguishesAlreadyHasDataFromFailure() {
+        // The Settings import button needs these two outcomes to read as
+        // different messages: one says the data is already safe, the other
+        // must never claim that when it isn't true.
+        writeLegacyTasks()
+        try! FileManager.default.createDirectory(
+            at: tasksDestination.deletingLastPathComponent(), withIntermediateDirectories: true
+        )
+        try! Data(#"[{"title":"New task"}]"#.utf8).write(to: tasksDestination)
+
+        XCTAssertEqual(
+            LegacyImporter.importTasksOutcome(from: tasksSource, to: tasksDestination),
+            .alreadyHasData
+        )
+    }
+
+    func testOutcomeReportsGenuineFailureDistinctly() {
+        writeLegacyTasks()
+        // Obstruct the destination's parent path with a regular file, so
+        // creating the directory there must throw — simulating a transient
+        // failure (disk full, permissions, source vanishing mid-copy).
+        try! Data().write(to: tasksDestination.deletingLastPathComponent())
+
+        XCTAssertEqual(
+            LegacyImporter.importTasksOutcome(from: tasksSource, to: tasksDestination),
+            .failed
+        )
+
+        // Clear the obstruction — a genuine failure must not be sticky.
+        try! FileManager.default.removeItem(at: tasksDestination.deletingLastPathComponent())
+        XCTAssertEqual(
+            LegacyImporter.importTasksOutcome(from: tasksSource, to: tasksDestination),
+            .imported
+        )
+    }
+
+    func testOutcomeReportsNothingToImportWhenSourceIsMissing() {
+        XCTAssertEqual(
+            LegacyImporter.importTasksOutcome(from: tasksSource, to: tasksDestination),
+            .nothingToImport
+        )
+    }
+
     func testNothingToImportStillMarksComplete() {
         XCTAssertFalse(performImport().importedTasks)
         XCTAssertTrue(suite.bool(forKey: "legacyImportCompleted"))

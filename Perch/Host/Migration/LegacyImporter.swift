@@ -61,7 +61,11 @@ enum LegacyImporter {
     /// must not be confused with there being nothing to import, or with the
     /// destination legitimately already holding data — only the former should
     /// leave `hasRunKey` unset so the next launch retries.
-    private enum TaskImportOutcome {
+    ///
+    /// Not `private`: the Settings import button (Task 13) needs this exact
+    /// vocabulary to tell a genuine failure apart from "nothing to do," rather
+    /// than collapsing every non-import outcome into one misleading message.
+    enum TaskImportOutcome {
         case imported
         case nothingToImport
         case alreadyHasData
@@ -94,13 +98,12 @@ enum LegacyImporter {
     /// already holds data — losing tasks to a migration would be unforgivable.
     ///
     /// Task 13's manual-import path calls this directly, deliberately
-    /// bypassing `hasRunKey` — its signature and "true means tasks were
-    /// copied" meaning must stay exactly as they are.
-    static func importTasks(from source: URL, to destination: URL) -> Bool {
-        importTasksOutcome(from: source, to: destination) == .imported
-    }
-
-    private static func importTasksOutcome(from source: URL, to destination: URL) -> TaskImportOutcome {
+    /// bypassing `hasRunKey`. It returns the full outcome rather than a
+    /// collapsed `Bool` so the caller can show an honest, distinct message
+    /// for each of "imported," "nothing to import," "already has data," and
+    /// a genuine failure — the last of which must never be reported as if
+    /// the user's data were safe.
+    static func importTasksOutcome(from source: URL, to destination: URL) -> TaskImportOutcome {
         let fileManager = FileManager.default
         guard fileManager.fileExists(atPath: source.path) else { return .nothingToImport }
         guard !fileManager.fileExists(atPath: destination.path) else { return .alreadyHasData }
