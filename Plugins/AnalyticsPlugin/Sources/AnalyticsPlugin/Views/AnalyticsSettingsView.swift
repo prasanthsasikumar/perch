@@ -8,6 +8,7 @@ struct AnalyticsSettingsView: View {
     @Bindable var store: AnalyticsStore
 
     @State private var importError: String?
+    @State private var isShowingGuide = false
     @State private var isDiscovering = false
     @State private var discovered: [AnalyticsProperty]?
     @State private var discoveryError: String?
@@ -67,7 +68,20 @@ struct AnalyticsSettingsView: View {
                     .foregroundStyle(.red)
             }
         } header: {
-            Text("Credentials")
+            HStack(spacing: 4) {
+                Text("Credentials")
+                Button {
+                    isShowingGuide = true
+                } label: {
+                    Image(systemName: "questionmark.circle")
+                }
+                .buttonStyle(.borderless)
+                .help("Where to get a service-account key")
+                .accessibilityLabel("Where to get a service-account key")
+                .popover(isPresented: $isShowingGuide, arrowEdge: .bottom) {
+                    SetupGuide(clientEmail: store.clientEmail)
+                }
+            }
         } footer: {
             Text(
                 "The key is stored in your login Keychain, not copied into Perch. "

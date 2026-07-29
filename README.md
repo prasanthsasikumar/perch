@@ -94,6 +94,27 @@ nickname someone typed into the console years ago rather than the domain. The
 name is editable in Settings; renaming is local and nothing is written back to
 Google.
 
+The **?** button beside Credentials in Settings has these steps with links,
+for when you need them and this file isn't open.
+
+#### If you lose the key
+
+Don't back the key file up — make a new one. Google hands a service-account
+key over exactly once, so a copy in cloud storage is a credential sitting
+somewhere else you have to defend, in exchange for saving the two minutes
+below. Everything that took setting up survives the machine anyway: the
+service account, its access to your properties, and the enabled APIs all live
+in Google.
+
+1. Cloud console › IAM & Admin › Service Accounts › your account › **Keys** ›
+   Add Key › Create new key › JSON.
+2. On the same screen, **delete the old key**. If the machine is gone, you
+   wanted that key dead regardless.
+3. Import the new file in Settings › Analytics.
+
+If you do want a copy, put it in a password manager rather than a file — and
+never in a folder that might one day become a git repository.
+
 The key goes into your login Keychain. Perch reads the file you pick once and
 never copies it or keeps a reference to it.
 
