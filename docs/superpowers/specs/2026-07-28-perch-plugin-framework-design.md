@@ -99,8 +99,24 @@ public protocol PerchPlugin: AnyObject, Observable {
     var settings: AnyView { get }
     var menuBarLabel: MenuBarLabel? { get }
     var footerActions: [PluginAction] { get }
+
+    func reload()  // storage changed underneath you; re-read it
+    func flush()   // we are about to terminate; write now
 }
 ```
+
+The two lifecycle hooks were added after the design review, over the original
+intent to have none. Both are default no-ops, so a plugin that needs neither is
+unaffected, and 0.x is exactly when a contract is allowed to grow. They exist
+because the host cannot honestly do without them:
+
+- `reload()` — the legacy importer copies a file into a plugin's storage while
+  that plugin is already running and holding the empty list it loaded at launch.
+  Without a way to say so, the plugin's next save destroys the import.
+- `flush()` — the panel's Quit button claimed to give every plugin a chance to
+  flush. MenuDo only survived because `TaskStore` privately subscribed to
+  `NSApplication.willTerminateNotification`; a second plugin author would not
+  have known to, and would have lost their users' debounced writes.
 
 `AnyView` rather than associated types is deliberate: associated types make
 `[any PerchPlugin]` painful to hold and iterate, and a menu bar panel is nowhere
@@ -246,6 +262,21 @@ or one click.
 The import is **non-destructive** (copies, never moves), **idempotent** (a
 completion flag in host defaults), and **refuses to run when the target already
 has data**.
+
+Two things the implementation had to get right that this section originally
+glossed over:
+
+- A **refused** read is not the same as **no legacy data**. `FileManager`
+  reports both as "does not exist", and treating a refusal as "nothing to
+  import" sets the completion flag forever — precisely disabling the retry the
+  user needs. The importer distinguishes them at the syscall level and treats a
+  refusal as a failure, to be retried next launch.
+- The manual import writes into the storage of a plugin that is **already
+  running**. The host calls `reload()` on that plugin in the same turn, before
+  anything can trigger a save; otherwise the plugin's stale, empty in-memory
+  list is written straight back over the import. A failed automatic import is
+  also surfaced, pointing the user at the manual fallback rather than leaving
+  them with an unexplained empty list.
 
 ### Stale login item
 
