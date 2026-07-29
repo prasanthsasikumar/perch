@@ -45,7 +45,7 @@ struct PropertyCardView: View {
     private var header: some View {
         Button(action: onToggle) {
             HStack(spacing: 6) {
-                Text(property.displayName)
+                Text(property.title)
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
                     .truncationMode(.middle)

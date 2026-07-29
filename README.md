@@ -89,6 +89,11 @@ holds a service-account key. It is the first plugin in Perch to do either.
 3. In Perch, open Settings › Analytics, choose the key file, then either
    **Discover Properties** or add a property by its numeric ID.
 
+Discovery uses whatever name the property carries in GA, which is often the
+nickname someone typed into the console years ago rather than the domain. The
+name is editable in Settings; renaming is local and nothing is written back to
+Google.
+
 The key goes into your login Keychain. Perch reads the file you pick once and
 never copies it or keeps a reference to it.
 

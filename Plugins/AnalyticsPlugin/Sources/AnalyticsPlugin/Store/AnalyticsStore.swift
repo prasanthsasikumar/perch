@@ -128,6 +128,15 @@ public final class AnalyticsStore {
         setProperties(properties.filter { $0.id != id })
     }
 
+    /// GA's own names are whatever was typed into the console years ago —
+    /// "homepage" rather than the domain. Renaming is local only; nothing is
+    /// written back to Google.
+    public func renameProperty(id: String, to name: String) {
+        guard let index = properties.firstIndex(where: { $0.id == id }) else { return }
+        properties[index].displayName = name
+        persist()
+    }
+
     public func discoverProperties() async throws -> [AnalyticsProperty] {
         guard let api else { throw AnalyticsError.notConfigured }
         return try await api.discoverProperties()

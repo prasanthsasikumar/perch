@@ -12,6 +12,13 @@ public struct AnalyticsProperty: Codable, Identifiable, Hashable, Sendable {
         self.displayName = displayName
     }
 
+    /// What to draw. Renaming is a live text field, so `displayName` is empty
+    /// for as long as it takes to clear it and type something else; falling
+    /// back to the id keeps a card from going nameless mid-edit.
+    public var title: String {
+        displayName.isEmpty ? id : displayName
+    }
+
     /// Discovery hands back `properties/516503233`; everything else in the
     /// plugin wants the bare id.
     public init(resourceName: String, displayName: String) {

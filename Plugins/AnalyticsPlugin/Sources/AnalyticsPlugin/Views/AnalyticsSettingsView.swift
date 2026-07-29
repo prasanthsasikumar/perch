@@ -102,7 +102,14 @@ struct AnalyticsSettingsView: View {
                         .help("Show this property in the menu bar")
 
                         VStack(alignment: .leading, spacing: 1) {
-                            Text(property.displayName)
+                            // Editable in place: GA's names are often the
+                            // console nickname ("homepage") rather than the
+                            // domain, and this is the only place they show.
+                            TextField("Name", text: Binding(
+                                get: { property.displayName },
+                                set: { store.renameProperty(id: property.id, to: $0) }
+                            ))
+                            .textFieldStyle(.plain)
                             Text(property.id)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)

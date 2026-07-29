@@ -216,6 +216,39 @@ final class AnalyticsStoreTests: XCTestCase {
         XCTAssertEqual(store.properties, [siteA])
     }
 
+    func testRenamingAPropertyKeepsItsIDAndStats() async throws {
+        let api = StubAnalyticsAPI(results: ["111": .success(Fixture.stats(users: 312))])
+        let store = makeStore(credentials: try configuredCredentials(), api: api)
+        store.setProperties([siteA])
+        await store.refresh()
+
+        store.renameProperty(id: "111", to: "prasanthsasikumar.com")
+
+        XCTAssertEqual(store.properties.map(\.displayName), ["prasanthsasikumar.com"])
+        XCTAssertEqual(store.properties.map(\.id), ["111"])
+        // Renaming is not re-adding: the numbers already fetched stay put.
+        XCTAssertEqual(store.stats["111"]?.currentWeek.activeUsers, 312)
+    }
+
+    /// The name field is a live binding, so it is empty for as long as it
+    /// takes to clear it and type something else. A card must not go nameless
+    /// in the meantime.
+    func testAClearedNameFallsBackToThePropertyID() {
+        let store = makeStore(credentials: InMemoryCredentialStore())
+        store.setProperties([siteA])
+
+        store.renameProperty(id: "111", to: "")
+
+        XCTAssertEqual(store.properties.first?.title, "111")
+    }
+
+    func testRenamingAnUnknownPropertyDoesNothing() {
+        let store = makeStore(credentials: InMemoryCredentialStore())
+        store.setProperties([siteA])
+        store.renameProperty(id: "nope", to: "x")
+        XCTAssertEqual(store.properties, [siteA])
+    }
+
     // MARK: - Menu bar
 
     func testMenuBarShowsTheLatestDayForThePrimaryProperty() async throws {
