@@ -37,18 +37,6 @@ public protocol PerchPlugin: AnyObject, Observable {
     /// Buttons contributed to the left of the panel footer. Default: none.
     var footerActions: [PluginAction] { get }
 
-    /// Re-read persisted state, discarding what is held in memory.
-    ///
-    /// The host calls this after it has changed this plugin's storage from the
-    /// outside — today that is only the legacy MenuDo import, which copies a
-    /// file into the plugin's directory while the plugin is already running.
-    /// Without it the plugin's stale in-memory state wins the next time it
-    /// saves, and the imported file is destroyed.
-    ///
-    /// Default: no-op. A plugin that keeps nothing on disk, or that watches its
-    /// own files, needs nothing here.
-    func reload()
-
     /// Write any unsaved state to disk now, synchronously.
     ///
     /// The host calls this before the process terminates — both from the
@@ -65,7 +53,6 @@ public extension PerchPlugin {
     var menuBarLabel: MenuBarLabel? { nil }
     var footerActions: [PluginAction] { [] }
 
-    func reload() {}
     func flush() {}
 
     // Instance mirrors of the statics, so the host can read metadata off an

@@ -6,8 +6,7 @@ import SwiftUI
 
 extension PluginContext {
     /// Every plugin context in Perch is built here, so "where does plugin X
-    /// keep its data" has exactly one answer — the legacy importer's
-    /// destination included.
+    /// keep its data" has exactly one answer.
     static func perch(_ identifier: String) -> PluginContext {
         .standard(appName: "Perch", identifier: identifier)
     }
@@ -16,42 +15,14 @@ extension PluginContext {
 @main
 struct PerchApp: App {
     @State private var registry: PluginRegistry
-    @State private var migration: MigrationState
-    // Deliberately no default value. A stored property's default is evaluated
-    // *before* init()'s body, and AppState registers the global hotkey the
-    // moment it is constructed — which would read the stored shortcut before
-    // LegacyImporter has written it, leaving the imported hotkey dead until
-    // the next launch.
-    @State private var appState: AppState
+    @State private var appState = AppState()
     @AppStorage("showTitleInMenuBar") private var showTitleInMenuBar = true
     @AppStorage("titleTruncationLength") private var titleTruncationLength = 30
 
     init() {
-        let result = LegacyImporter.runIfNeeded()
-        // Only now, with KeyboardShortcuts_openPerch already in defaults.
-        _appState = State(initialValue: AppState())
-
         let registry = PluginRegistry(plugins: PerchApp.makePlugins())
         _registry = State(initialValue: registry)
         PerchApp.flushPluginsOnTermination(registry)
-
-        let state = MigrationState()
-        switch result.taskOutcome {
-        case .imported:
-            state.notice = MigrationState.importedNotice
-        case .failed:
-            state.notice = MigrationState.importFailedNotice
-        case .nothingToImport, .alreadyHasData:
-            // Deliberately silent. `.alreadyHasData` is decided by decoding the
-            // destination, not by its mere existence, so it now means Perch
-            // genuinely holds tasks — and a user looking at their own tasks
-            // does not need to be told a migration was skipped. In the one
-            // sub-case where that file is present but undecodable, the plugin
-            // itself says so via `TaskStore.loadFailureNotice`, which is the
-            // component that actually knows.
-            break
-        }
-        _migration = State(initialValue: state)
     }
 
     /// The one place in Perch that decides which plugins exist.
@@ -76,7 +47,7 @@ struct PerchApp: App {
         @Bindable var appState = appState
 
         MenuBarExtra {
-            PanelView(registry: registry, migration: migration)
+            PanelView(registry: registry)
         } label: {
             menuBarContent(
                 MenuBarLabelResolver.resolve(
@@ -90,7 +61,7 @@ struct PerchApp: App {
         .menuBarExtraStyle(.window)
 
         Settings {
-            SettingsView(registry: registry, migration: migration)
+            SettingsView(registry: registry)
         }
     }
 

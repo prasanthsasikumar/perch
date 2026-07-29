@@ -4,10 +4,5 @@
 <dict>
 	<key>com.apple.security.app-sandbox</key>
 	<true/>
-	<!-- One-time migration from MenuDo 1.x. Remove once users have moved. -->
-	<key>com.apple.security.temporary-exception.files.home-relative-path.read-only</key>
-	<array>
-		<string>/Library/Containers/org.ahlab.MenuDo/</string>
-	</array>
 </dict>
 </plist>

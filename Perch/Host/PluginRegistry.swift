@@ -120,14 +120,6 @@ final class PluginRegistry {
         for entry in entries { entry.plugin.flush() }
     }
 
-    /// Tells one plugin its storage changed underneath it. Like `flushAll`,
-    /// this reaches a disabled plugin — the legacy import can land on one the
-    /// user happens to have switched off, and it must not read stale state if
-    /// they switch it back on.
-    func reload(id: String) {
-        entries.first { $0.id == id }?.plugin.reload()
-    }
-
     private func persistEnabledIDs() {
         defaults.set(Array(enabledIDs), forKey: Key.enabled)
     }

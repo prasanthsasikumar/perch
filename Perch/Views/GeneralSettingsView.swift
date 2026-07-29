@@ -1,21 +1,13 @@
-import AppKit
 import KeyboardShortcuts
-import MenuDoPlugin
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct GeneralSettingsView: View {
     @Bindable var registry: PluginRegistry
-    @Bindable var migration: MigrationState
 
     @AppStorage("showTitleInMenuBar") private var showTitleInMenuBar = true
     @AppStorage("titleTruncationLength") private var titleTruncationLength = 30
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
     @State private var launchAtLoginError: String?
-    /// The outcome of a manual import, shown in this pane. The panel's notice
-    /// is no use here — the button is in Settings, and Settings is what the
-    /// user is looking at when they press it.
-    @State private var importResult: MenuDoImport.Feedback?
 
     var body: some View {
         Form {
@@ -65,40 +57,7 @@ struct GeneralSettingsView: View {
                 }
                 KeyboardShortcuts.Recorder("Open Perch:", name: .openPerch)
             }
-
-            Section("Migration") {
-                Button("Import from MenuDo…") { importFromMenuDo() }
-                Text(
-                    "Only needed if your tasks didn't carry over from MenuDo 1.x. "
-                    + "Choose the old tasks.json when prompted."
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                if let importResult {
-                    Text(importResult.message)
-                        .font(.caption)
-                        .foregroundStyle(importResult.isFailure ? Color.red : Color.secondary)
-                }
-            }
         }
         .formStyle(.grouped)
-    }
-
-    /// The fallback for when the sandbox refuses the automatic import. The
-    /// user picking the file is itself the consent that grants read access, so
-    /// this path works with no entitlement at all.
-    private func importFromMenuDo() {
-        let panel = NSOpenPanel()
-        panel.title = "Import from MenuDo"
-        panel.prompt = "Import"
-        panel.allowedContentTypes = [.json]
-        panel.directoryURL = LegacyImporter.legacyTasksURL.deletingLastPathComponent()
-        panel.canChooseDirectories = false
-        NSApp.activate(ignoringOtherApps: true)
-        guard panel.runModal() == .OK, let source = panel.url else { return }
-
-        importResult = MenuDoImport.perform(
-            from: source, registry: registry, migration: migration
-        )
     }
 }

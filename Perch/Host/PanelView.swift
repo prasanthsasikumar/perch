@@ -5,29 +5,9 @@ import SwiftUI
 /// The dropdown. Chrome belongs to the host; the middle belongs to a plugin.
 struct PanelView: View {
     @Bindable var registry: PluginRegistry
-    @Bindable var migration: MigrationState
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if let notice = migration.notice {
-                HStack(alignment: .top, spacing: 8) {
-                    Text(notice)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Button {
-                        migration.dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                    }
-                    .buttonStyle(.borderless)
-                    .accessibilityLabel("Dismiss")
-                }
-                .padding(.horizontal, 12)
-                .padding(.top, 10)
-                Divider()
-            }
-
             if registry.showsTabStrip {
                 PluginTabStrip(registry: registry)
                 Divider()

@@ -28,22 +28,22 @@ try again:
 xattr -dr com.apple.quarantine /Applications/Perch.app
 ```
 
-## Upgrading from MenuDo
+## Coming from MenuDo
 
-Perch is MenuDo 1.x renamed and rebuilt as a plugin host. Your tasks and
-settings are carried across automatically the first time you launch it.
+Perch is MenuDo renamed and rebuilt as a plugin host. It starts with an empty
+list — macOS gives each app its own sandbox, and Perch's is a different one, so
+tasks from a MenuDo install do not carry over.
 
-macOS gives each app its own sandbox, so if the automatic import doesn't find
-your old data, open **Settings → General → Import from MenuDo…** and choose the
-old `tasks.json`. It lives at:
+If you want them, copy the old file across by hand before first launch:
 
 ```
-~/Library/Containers/org.ahlab.MenuDo/Data/Library/Application Support/MenuDo/tasks.json
+from: ~/Library/Containers/org.ahlab.MenuDo/Data/Library/Application Support/MenuDo/tasks.json
+to:   ~/Library/Containers/org.ahlab.Perch/Data/Library/Application Support/Perch/Plugins/org.ahlab.perch.menudo/tasks.json
 ```
 
-Once your tasks are in Perch, **move `MenuDo.app` to the Trash**. Perch can't
-unregister MenuDo's launch-at-login entry, so until the old app is deleted both
-will start when you log in.
+Also **move `MenuDo.app` to the Trash**. Perch can't unregister MenuDo's
+launch-at-login entry, so until the old app is deleted both will start when you
+log in.
 
 ## Plugins
 
@@ -66,7 +66,7 @@ Click the gear icon in the panel.
 
 | Pane | What's in it |
 |---|---|
-| General | Which plugin owns the menu bar, title display and length, launch at login, global hotkey, MenuDo import |
+| General | Which plugin owns the menu bar, title display and length, launch at login, global hotkey |
 | Plugins | Enable or disable each plugin, and see what each one can access |
 | Tasks | Per-plugin settings, when a plugin has any |
 
@@ -96,8 +96,8 @@ generated with [XcodeGen](https://github.com/yonaskolb/XcodeGen), so only
 
 ```bash
 brew install xcodegen
-git clone https://github.com/prasanthsasikumar/menudo.git
-cd menudo
+git clone https://github.com/prasanthsasikumar/perch.git
+cd perch
 xcodegen generate
 open Perch.xcodeproj
 ```
@@ -115,7 +115,7 @@ PerchKit/                The public plugin API. Knows nothing about the host.
 Plugins/MenuDoPlugin/    The Tasks plugin: model, store, views
 Perch/
   PerchApp.swift         MenuBarExtra scene, plugin instantiation
-  Host/                  Registry, panel chrome, menu bar label, MenuDo import
+  Host/                  Registry, panel chrome, menu bar label
   Views/                 Settings window
   Support/               Launch at login, hotkey state, title truncation
 PerchTests/              Unit tests for the kit, the plugin, and the host

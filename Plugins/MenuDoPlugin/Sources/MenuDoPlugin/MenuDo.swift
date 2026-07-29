@@ -36,11 +36,6 @@ public final class MenuDo: PerchPlugin {
         MenuBarLabel(systemImage: Self.icon, text: store.currentTask?.title)
     }
 
-    /// The legacy import copies a tasks file straight into this plugin's
-    /// storage while the store is already live and holding an empty list.
-    /// Re-reading is what stops that empty list from being written back.
-    public func reload() { store.reload() }
-
     /// The store debounces its writes, so there is routinely up to half a
     /// second of unsaved work when the user quits.
     public func flush() { store.saveNow() }

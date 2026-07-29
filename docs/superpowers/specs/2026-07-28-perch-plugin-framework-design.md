@@ -1,7 +1,15 @@
 # Perch — Menu Bar Plugin Framework — Design
 
 **Date:** 2026-07-28
-**Status:** Approved by user (brainstorming session)
+**Status:** Approved by user (brainstorming session), then built.
+
+> **Superseded in part.** The MenuDo migration described below was built, shipped,
+> and then deliberately removed once the maintainer's own data had moved across —
+> along with its sandbox entitlement, its Settings pane, and the `reload()` hook
+> that existed only to serve it. Perch no longer imports anything from MenuDo;
+> the README documents the manual copy for anyone who still needs it. Everything
+> else here still describes the shipped code, including `flush()`, which stays
+> because the quit path genuinely needs it.
 
 ## Goal
 
