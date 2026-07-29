@@ -107,6 +107,24 @@ final class PluginRegistry {
         }
     }
 
+    /// Makes `PerchPlugin.flush()`'s promise real: called from the panel's Quit
+    /// button and from `NSApplication.willTerminateNotification`, so a plugin
+    /// with debounced writes never has to hook the app lifecycle itself.
+    ///
+    /// Only `enabled` plugins: a disabled one is not being shown or mutated,
+    /// and flushing it would write over a file the user may have edited.
+    func flushAll() {
+        for entry in enabled { entry.plugin.flush() }
+    }
+
+    /// Tells one plugin its storage changed underneath it. Every entry, not
+    /// just the enabled ones — the legacy import can land on a plugin the user
+    /// happens to have switched off, and it must not read stale state if they
+    /// switch it back on.
+    func reload(id: String) {
+        entries.first { $0.id == id }?.plugin.reload()
+    }
+
     private func persistEnabledIDs() {
         defaults.set(Array(enabledIDs), forKey: Key.enabled)
     }

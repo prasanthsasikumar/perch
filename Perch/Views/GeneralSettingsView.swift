@@ -1,10 +1,18 @@
 import AppKit
 import KeyboardShortcuts
-import PerchKit
+import MenuDoPlugin
 import SwiftUI
 import UniformTypeIdentifiers
 
 struct GeneralSettingsView: View {
+    /// The outcome of a manual import, shown in this pane. The panel's notice
+    /// is no use here — the button is in Settings, and Settings is what the
+    /// user is looking at when they press it.
+    private struct ImportResult {
+        var message: String
+        var isFailure: Bool
+    }
+
     @Bindable var registry: PluginRegistry
     @Bindable var migration: MigrationState
 
@@ -12,6 +20,7 @@ struct GeneralSettingsView: View {
     @AppStorage("titleTruncationLength") private var titleTruncationLength = 30
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
     @State private var launchAtLoginError: String?
+    @State private var importResult: ImportResult?
 
     var body: some View {
         Form {
@@ -70,6 +79,11 @@ struct GeneralSettingsView: View {
                 )
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                if let importResult {
+                    Text(importResult.message)
+                        .font(.caption)
+                        .foregroundStyle(importResult.isFailure ? Color.red : Color.secondary)
+                }
             }
         }
         .formStyle(.grouped)
@@ -88,21 +102,39 @@ struct GeneralSettingsView: View {
         NSApp.activate(ignoringOtherApps: true)
         guard panel.runModal() == .OK, let source = panel.url else { return }
 
-        let destination = PluginContext
-            .standard(appName: "Perch", identifier: "org.ahlab.perch.menudo")
-            .storage
-            .url(named: "tasks.json")
-        switch LegacyImporter.importTasksOutcome(from: source, to: destination) {
+        let outcome = LegacyImporter.importTasksOutcome(
+            from: source, to: LegacyImporter.menuDoTasksDestination
+        )
+        // Before anything else can run. The plugin is live and holding the
+        // empty list it loaded at launch; the very next save — a quit, an
+        // added task — would write that empty list over the file just copied
+        // in. Nothing yields between the copy and here, so there is no window
+        // in which the host has changed a plugin's file behind its back.
+        if outcome == .imported {
+            registry.reload(id: MenuDo.identifier)
+        }
+
+        switch outcome {
         case .imported:
-            migration.notice = "Imported. Relaunch Perch to see your tasks."
+            importResult = ImportResult(
+                message: "Imported — your tasks are in Perch now.", isFailure: false
+            )
+            migration.notice = MigrationState.importedNotice
         case .alreadyHasData:
-            migration.notice = "Nothing imported — Perch already has tasks saved."
+            importResult = ImportResult(
+                message: "Nothing imported — Perch already has tasks saved.", isFailure: false
+            )
         case .nothingToImport:
-            migration.notice = "That file couldn't be read — choose the tasks.json file again."
+            importResult = ImportResult(
+                message: "That file is no longer there — choose the tasks.json file again.",
+                isFailure: true
+            )
         case .failed:
-            migration.notice =
-                "Import failed — something went wrong copying that file. "
-                + "Check that Perch can read it and try again."
+            importResult = ImportResult(
+                message: "Import failed — something went wrong copying that file. "
+                    + "Check that Perch can read it and try again.",
+                isFailure: true
+            )
         }
     }
 }

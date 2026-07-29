@@ -1,4 +1,5 @@
 import Foundation
+import MenuDoPlugin
 import PerchKit
 
 /// Carries a MenuDo 1.x user's data across the bundle identifier change.
@@ -6,10 +7,19 @@ import PerchKit
 /// Renaming the app moved the sandbox container, which took both the task file
 /// and every `UserDefaults` value with it. This runs once, copies both, and
 /// then never touches the old container again.
+///
+/// This is the one host type that is allowed to name `MenuDo` outside
+/// `PerchApp`: it exists solely to move MenuDo 1.x's data, so pretending to be
+/// plugin-agnostic would be a fiction. It names the plugin type rather than
+/// repeating its identifier as a string, so the destination can never drift
+/// from where the plugin actually reads.
 enum LegacyImporter {
     struct Result: Equatable {
-        var importedTasks = false
+        var taskOutcome: TaskImportOutcome = .nothingToImport
         var importedPreferences = false
+
+        /// Derived, not stored — one source of truth for what happened.
+        var importedTasks: Bool { taskOutcome == .imported }
     }
 
     private static let hasRunKey = "legacyImportCompleted"
@@ -44,14 +54,23 @@ enum LegacyImporter {
         "KeyboardShortcuts_openMenuDo": "KeyboardShortcuts_openPerch",
     ]
 
+    /// Where an imported task file has to land: the exact URL `MenuDo`'s own
+    /// storage reads from. Both the automatic import and the Settings button
+    /// go through here, so the two can never target different files.
+    ///
+    /// `@MainActor` only because `MenuDo`'s metadata is — reading a plugin's
+    /// identifier is main-actor work under the plugin protocol's isolation.
+    @MainActor
+    static var menuDoTasksDestination: URL {
+        PluginContext.perch(MenuDo.identifier).storage.url(named: MenuDo.tasksFilename)
+    }
+
+    @MainActor
     @discardableResult
     static func runIfNeeded() -> Result {
         run(
             tasksSource: legacyTasksURL,
-            tasksDestination: PluginContext
-                .standard(appName: "Perch", identifier: "org.ahlab.perch.menudo")
-                .storage
-                .url(named: "tasks.json"),
+            tasksDestination: menuDoTasksDestination,
             preferencesSource: legacyPreferencesURL,
             defaults: .standard
         )
@@ -62,7 +81,7 @@ enum LegacyImporter {
     /// destination legitimately already holding data — only the former should
     /// leave `hasRunKey` unset so the next launch retries.
     ///
-    /// Not `private`: the Settings import button (Task 13) needs this exact
+    /// Not `private`: the Settings import button needs this exact
     /// vocabulary to tell a genuine failure apart from "nothing to do," rather
     /// than collapsing every non-import outcome into one misleading message.
     enum TaskImportOutcome {
@@ -80,32 +99,62 @@ enum LegacyImporter {
     ) -> Result {
         guard !defaults.bool(forKey: hasRunKey) else { return Result() }
 
-        let outcome = importTasksOutcome(from: tasksSource, to: tasksDestination)
         var result = Result()
-        result.importedTasks = (outcome == .imported)
+        result.taskOutcome = importTasksOutcome(from: tasksSource, to: tasksDestination)
         result.importedPreferences = importPreferences(from: preferencesSource, into: defaults)
 
-        // A genuine failure must be retried on the next launch. Every other
-        // outcome — nothing to import, or the destination already has data —
-        // is a legitimate, permanent completion.
-        if outcome != .failed {
+        // A genuine failure — including a source we were refused — must be
+        // retried on the next launch. Every other outcome (nothing to import,
+        // or the destination already has data) is a permanent completion.
+        if result.taskOutcome != .failed {
             defaults.set(true, forKey: hasRunKey)
         }
         return result
     }
 
+    /// Whether a source file is there and actually readable.
+    ///
+    /// `FileManager.fileExists` collapses "no such file" and "the sandbox said
+    /// no" into the same `false`, and only the first is a permanent, legitimate
+    /// "nothing to import". Treating a denial as nothing-to-import sets
+    /// `hasRunKey` forever, so a user whose read is refused once never gets
+    /// another automatic attempt. The entitlement that makes this work today is
+    /// not insurance against a future macOS, a notarized build, or a TCC
+    /// change, so the two cases are told apart at the syscall level.
+    enum SourceState: Equatable {
+        case present
+        case absent
+        case unreadable
+    }
+
+    static func sourceState(of url: URL) -> SourceState {
+        var info = stat()
+        guard stat(url.path, &info) == 0 else {
+            // Anything other than "it isn't there" — EACCES, EPERM, a sandbox
+            // denial — is a refusal, not an absence.
+            return errno == ENOENT ? .absent : .unreadable
+        }
+        // Metadata can be visible while the bytes are not, so ask separately.
+        return access(url.path, R_OK) == 0 ? .present : .unreadable
+    }
+
     /// Copies rather than moves, and refuses to touch a destination that
     /// already holds data — losing tasks to a migration would be unforgivable.
     ///
-    /// Task 13's manual-import path calls this directly, deliberately
-    /// bypassing `hasRunKey`. It returns the full outcome rather than a
-    /// collapsed `Bool` so the caller can show an honest, distinct message
-    /// for each of "imported," "nothing to import," "already has data," and
-    /// a genuine failure — the last of which must never be reported as if
-    /// the user's data were safe.
+    /// The Settings import button calls this directly, deliberately bypassing
+    /// `hasRunKey`. It returns the full outcome rather than a collapsed `Bool`
+    /// so the caller can show an honest, distinct message for each of
+    /// "imported," "nothing to import," "already has data," and a genuine
+    /// failure — the last of which must never be reported as if the user's
+    /// data were safe.
     static func importTasksOutcome(from source: URL, to destination: URL) -> TaskImportOutcome {
         let fileManager = FileManager.default
-        guard fileManager.fileExists(atPath: source.path) else { return .nothingToImport }
+        switch sourceState(of: source) {
+        case .absent: return .nothingToImport
+        // Retried next launch rather than written off as nothing to import.
+        case .unreadable: return .failed
+        case .present: break
+        }
         guard !fileManager.fileExists(atPath: destination.path) else { return .alreadyHasData }
         do {
             try fileManager.createDirectory(

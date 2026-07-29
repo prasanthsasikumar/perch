@@ -22,9 +22,27 @@ final class LegacyImporterTests: XCTestCase {
     }
 
     override func tearDown() {
+        // Some tests revoke read permission to stand in for a sandbox denial;
+        // put it back, or the temp tree can't be deleted.
+        restorePermissions()
         try? FileManager.default.removeItem(at: root)
         UserDefaults.standard.removePersistentDomain(forName: suiteName)
         super.tearDown()
+    }
+
+    private func setPermissions(_ mode: Int, on url: URL) {
+        try! FileManager.default.setAttributes(
+            [.posixPermissions: mode], ofItemAtPath: url.path
+        )
+    }
+
+    private func restorePermissions() {
+        try? FileManager.default.setAttributes(
+            [.posixPermissions: 0o755], ofItemAtPath: root.appendingPathComponent("old").path
+        )
+        try? FileManager.default.setAttributes(
+            [.posixPermissions: 0o644], ofItemAtPath: tasksSource.path
+        )
     }
 
     private func writeLegacyTasks(_ contents: String = #"[{"title":"Old task"}]"#) {
@@ -154,6 +172,61 @@ final class LegacyImporterTests: XCTestCase {
         writeLegacyTasks()
         XCTAssertFalse(performImport().importedTasks)
         XCTAssertFalse(FileManager.default.fileExists(atPath: tasksDestination.path))
+    }
+
+    // MARK: - "It isn't there" vs "I was refused"
+
+    func testSourceStateTellsAnAbsentFileFromAnUnreadableOne() {
+        XCTAssertEqual(LegacyImporter.sourceState(of: tasksSource), .absent)
+
+        writeLegacyTasks()
+        XCTAssertEqual(LegacyImporter.sourceState(of: tasksSource), .present)
+
+        // Metadata still visible, bytes refused — what `FileManager.fileExists`
+        // would happily report as `false`, i.e. as "there is nothing to import".
+        setPermissions(0, on: tasksSource)
+        XCTAssertEqual(LegacyImporter.sourceState(of: tasksSource), .unreadable)
+    }
+
+    func testAnUnreadableContainerIsNotMistakenForAnAbsentFile() {
+        writeLegacyTasks()
+        // The likelier shape of a sandbox denial: the whole container is
+        // off-limits, so even stat() fails.
+        setPermissions(0, on: root.appendingPathComponent("old"))
+        XCTAssertEqual(LegacyImporter.sourceState(of: tasksSource), .unreadable)
+    }
+
+    func testARefusedSourceIsRetriedRatherThanWrittenOffAsNothingToImport() {
+        writeLegacyTasks()
+        // Revoking the containing directory, not the file: that is the shape a
+        // sandbox denial takes, and the one `FileManager.fileExists` used to
+        // report as a plain `false` — indistinguishable from "no legacy data".
+        setPermissions(0, on: root.appendingPathComponent("old"))
+
+        XCTAssertEqual(
+            LegacyImporter.importTasksOutcome(from: tasksSource, to: tasksDestination),
+            .failed
+        )
+        XCTAssertFalse(performImport().importedTasks)
+        // The whole point: `.nothingToImport` would set this permanently, and
+        // the user would never get another automatic attempt.
+        XCTAssertFalse(suite.bool(forKey: "legacyImportCompleted"))
+
+        // Access restored — as it would be by a fixed entitlement or a later
+        // macOS — and the next launch carries the tasks across.
+        restorePermissions()
+        XCTAssertTrue(performImport().importedTasks)
+    }
+
+    func testResultCarriesTheOutcomeSoTheAppCanExplainAFailure() {
+        writeLegacyTasks()
+        setPermissions(0, on: root.appendingPathComponent("old"))
+        // Important 3: `importedTasks == false` alone can't tell the app
+        // whether to stay quiet or point the user at the manual fallback.
+        XCTAssertEqual(performImport().taskOutcome, .failed)
+
+        restorePermissions()
+        XCTAssertEqual(performImport().taskOutcome, .imported)
     }
 
     func testPreferencesAreCarriedAcross() {

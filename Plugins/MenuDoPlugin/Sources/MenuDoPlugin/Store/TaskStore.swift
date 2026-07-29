@@ -17,6 +17,9 @@ public final class TaskStore {
         self.storage = storage
         self.filename = filename
         load()
+        // Belt and braces. The host now calls `MenuDo.flush()` on both quit
+        // paths, so this is redundant inside Perch — but it costs nothing and
+        // a debounced write is the one thing worth losing sleep over.
         NotificationCenter.default.addObserver(
             forName: NSApplication.willTerminateNotification, object: nil, queue: .main
         ) { [weak self] _ in
@@ -97,9 +100,24 @@ public final class TaskStore {
         try? storage.save(items, named: filename)
     }
 
+    /// Throws away in-memory state and re-reads the file.
+    ///
+    /// Only for when something outside this store has replaced the file — the
+    /// legacy MenuDo import does exactly that, copying tasks in underneath a
+    /// store that already loaded an empty list. Without this, the very next
+    /// save writes that empty list back over the import.
+    ///
+    /// Any debounced save is cancelled first: the state it was going to write
+    /// is precisely the state being discarded.
+    public func reload() {
+        pendingSave?.cancel()
+        load()
+    }
+
     private func load() {
         do {
             items = try storage.load([TodoItem].self, named: filename) ?? []
+            loadFailureNotice = nil
         } catch {
             items = []
             loadFailureNotice = "Couldn't read saved tasks — backup kept"

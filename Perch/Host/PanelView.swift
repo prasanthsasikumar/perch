@@ -53,7 +53,12 @@ struct PanelView: View {
     }
 
     /// Gives every enabled plugin a chance to flush before the process dies.
+    ///
+    /// The host has to make this call itself. Leaving it to plugins to notice
+    /// `NSApplication.willTerminateNotification` on their own means the first
+    /// plugin author who doesn't think of it loses their users' unsaved work.
     private func quit() {
+        registry.flushAll()
         NSApp.terminate(nil)
     }
 }
