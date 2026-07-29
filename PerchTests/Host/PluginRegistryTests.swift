@@ -126,6 +126,7 @@ final class PluginRegistryTests: XCTestCase {
 
     func testAPersistedIDForAPluginThatNoLongerExistsIsIgnored() {
         suite.set(["alpha", "gamma"], forKey: "enabledPluginIDs")
+        suite.set(["alpha", "beta", "gamma"], forKey: "seenPluginIDs")
         suite.set("gamma", forKey: "activePluginID")
         suite.set("gamma", forKey: "primaryPluginID")
 
@@ -133,6 +134,47 @@ final class PluginRegistryTests: XCTestCase {
         XCTAssertEqual(registry.enabled.map(\.id), ["alpha"])
         XCTAssertEqual(registry.active?.id, "alpha")
         XCTAssertEqual(registry.primary?.id, "alpha")
+    }
+
+    /// The upgrade path for shipping a new plugin. Without this, a build that
+    /// adds a plugin would ship it switched off to everyone who already had
+    /// Perch, because its id is missing from their stored enabled list.
+    func testAPluginAddedAfterInstallArrivesEnabled() {
+        // An install that only ever knew about Alpha.
+        suite.set(["alpha"], forKey: "enabledPluginIDs")
+        suite.set(["alpha"], forKey: "seenPluginIDs")
+
+        let registry = makeRegistry()
+
+        XCTAssertEqual(registry.enabled.map(\.id), ["alpha", "beta"])
+    }
+
+    /// The other half of it: a plugin the user switched off must stay off,
+    /// which is why "never offered" and "declined" are tracked separately.
+    func testAPluginTheUserDisabledStaysDisabled() {
+        suite.set(["alpha"], forKey: "enabledPluginIDs")
+        suite.set(["alpha", "beta"], forKey: "seenPluginIDs")
+
+        let registry = makeRegistry()
+
+        XCTAssertEqual(registry.enabled.map(\.id), ["alpha"])
+    }
+
+    /// Installs predating the seen list seed it from whatever was enabled.
+    /// Those two states are genuinely indistinguishable on such an install, so
+    /// this resolves the ambiguity towards showing the new plugin — a plugin
+    /// that appears unbidden is a smaller failure than one that never appears
+    /// at all, and one click puts it back.
+    func testAnInstallWithNoSeenListSeedsItFromWhatWasEnabled() {
+        suite.set(["alpha"], forKey: "enabledPluginIDs")
+
+        let registry = makeRegistry()
+
+        XCTAssertEqual(registry.enabled.map(\.id), ["alpha", "beta"])
+        XCTAssertEqual(
+            Set(suite.array(forKey: "seenPluginIDs") as? [String] ?? []),
+            ["alpha", "beta"]
+        )
     }
 
     func testTabStripIsHiddenUntilASecondPluginIsEnabled() {

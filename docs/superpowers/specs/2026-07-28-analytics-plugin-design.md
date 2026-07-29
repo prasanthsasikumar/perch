@@ -29,7 +29,7 @@ Plugins/AnalyticsPlugin/Sources/AnalyticsPlugin/
     AnalyticsError.swift          every failure the UI has to render
   Auth/
     DER.swift                     minimal DER reader; PKCS#8 -> PKCS#1 unwrap
-    Keychain.swift                generic-password item under the plugin id
+    Keychain.swift                CredentialStore protocol + keychain item
     GoogleTokenProvider.swift     RS256 assertion -> access token, cached
   API/
     HTTPTransport.swift           protocol + URLSession implementation
@@ -86,8 +86,10 @@ Per property, per refresh, three POSTs to
 
 The week comparison sends both ranges in a single request rather than the two
 the Python makes; GA returns one row per range, tagged with a synthetic
-`dateRange` dimension. Today's active-user count for the menu bar is read off
-the last daily row, so it costs no extra call.
+`dateRange` dimension. The menu bar number is the last daily row, so it costs no
+extra call — and it is deliberately GA's latest day rather than the Mac's
+today, because a property reporting in Asia/Singapore is already on tomorrow's
+date by a New York evening.
 
 Week boundaries match the script exactly: current is `today-7 … today`,
 previous is `today-14 … today-8`, both in the local calendar.
@@ -123,6 +125,7 @@ rendering normally.
 | No key imported | "Connect Google Analytics" prompt pointing at Settings |
 | 401 / `invalid_grant` | "Sign-in failed — re-import your key"; cached token dropped |
 | 403 on a property | That card only: "No access — add `<client_email>` as a viewer in GA4 Admin", email copyable |
+| 403 with `SERVICE_DISABLED` | Google's own message, verbatim and selectable — it names the console URL that enables the API. Not the sharing advice above, which would send the user to a console that cannot help. |
 | Offline | Cached numbers stay, dimmed, with how old they are |
 | Corrupt cache | `PluginStorage` keeps a `.bak` and throws; the store starts empty |
 
@@ -159,7 +162,8 @@ All offline, behind the `GoogleAnalyticsAPI` and `HTTPTransport` seams.
   and refetched after, against a stub transport.
 - **AnalyticsStore** — staleness threshold, cache round-trip through a temp
   directory, per-property error isolation, and the primary property driving the
-  menu bar label.
+  menu bar label. Credentials go through a `CredentialStore` protocol so no
+  test writes to the developer's real login keychain.
 
 ## Out of scope
 

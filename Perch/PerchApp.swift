@@ -1,3 +1,4 @@
+import AnalyticsPlugin
 import AppKit
 import MenuBarExtraAccess
 import MenuDoPlugin
@@ -28,7 +29,8 @@ struct PerchApp: App {
     /// The one place in Perch that decides which plugins exist.
     private static func makePlugins() -> [any PerchPlugin] {
         [
-            MenuDo(context: .perch(MenuDo.identifier))
+            MenuDo(context: .perch(MenuDo.identifier)),
+            Analytics(context: .perch(Analytics.identifier)),
         ]
     }
 

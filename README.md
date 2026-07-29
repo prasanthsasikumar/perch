@@ -3,8 +3,9 @@
 Small tools that live in your macOS menu bar.
 
 Perch is a host. The tools themselves are plugins: today there's **Tasks**, the
-todo list Perch grew out of, which keeps your current task visible in the menu
-bar. More can be added without disturbing what's already there.
+todo list Perch grew out of, and **Analytics**, which puts your Google
+Analytics numbers a click away. More can be added without disturbing what's
+already there.
 
 ## Download
 
@@ -60,6 +61,37 @@ log in.
 
 Tasks declares no capabilities: everything it stores stays on your Mac.
 
+### Analytics
+
+Your GA4 numbers in the menu bar, without opening a browser or running a
+script.
+
+- **Latest day in the menu bar.** Active users for whichever property you mark
+  primary, read from the most recent day GA has — the property's own timezone,
+  not your laptop's.
+- **A card per property.** This week versus last with signed percentages, a
+  sparkline of the week, and the 30-day totals and daily rows one click down.
+- **Half-hourly, and on open.** Refreshes in the background, and again when you
+  open the panel if what's cached has gone stale. Last-fetched numbers are kept
+  on disk, so the panel opens on real data rather than a spinner.
+
+Analytics declares `network` and `credentials`: it talks to Google, and it
+holds a service-account key. It is the first plugin in Perch to do either.
+
+#### Setting it up
+
+1. In the [Google Cloud console](https://console.cloud.google.com), create a
+   service account and download a JSON key. Enable the **Google Analytics Data
+   API**, and the **Admin API** too if you want Perch to find your properties
+   for you.
+2. In GA4 Admin › Property Access, add the service account's address
+   (`…@….iam.gserviceaccount.com`) as a **Viewer**.
+3. In Perch, open Settings › Analytics, choose the key file, then either
+   **Discover Properties** or add a property by its numeric ID.
+
+The key goes into your login Keychain. Perch reads the file you pick once and
+never copies it or keeps a reference to it.
+
 ## Settings
 
 Click the gear icon in the panel.
@@ -69,6 +101,7 @@ Click the gear icon in the panel.
 | General | Which plugin owns the menu bar, title display and length, launch at login, global hotkey |
 | Plugins | Enable or disable each plugin, and see what each one can access |
 | Tasks | Per-plugin settings, when a plugin has any |
+| Analytics | Service-account key, watched properties, which one is primary |
 
 ## Your data
 
@@ -83,10 +116,14 @@ Tasks stores a plain JSON file there and nothing else. If that file is ever
 unreadable, Perch keeps a `.bak` copy beside it and tells you, rather than
 silently starting empty.
 
-A note on how far that guarantee goes: macOS grants permissions to an app, not
-to individual plugins. Perch's Settings window discloses what each plugin does,
-but a permission any plugin needs is one the whole app carries. Every plugin
-that ships today declares nothing and touches the network never.
+Analytics is the exception, and it is the honest illustration of the limit
+here: macOS grants permissions to an app, not to individual plugins. Because
+Analytics needs the network, the whole binary carries the network entitlement,
+including the plugins that would never use it. Perch's Settings window
+discloses what each plugin does, but disclosure is all it can offer — it cannot
+sandbox one plugin away from another's permissions. Analytics sends nothing but
+authenticated requests to Google's own APIs, and stores its key in the
+Keychain rather than in the container.
 
 ## Building from source
 
@@ -113,6 +150,7 @@ xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=ma
 ```
 PerchKit/                The public plugin API. Knows nothing about the host.
 Plugins/MenuDoPlugin/    The Tasks plugin: model, store, views
+Plugins/AnalyticsPlugin/ The Analytics plugin: GA4 client, auth, store, views
 Perch/
   PerchApp.swift         MenuBarExtra scene, plugin instantiation
   Host/                  Registry, panel chrome, menu bar label

@@ -21,6 +21,7 @@ final class PluginRegistry {
 
     private enum Key {
         static let enabled = "enabledPluginIDs"
+        static let seen = "seenPluginIDs"
         static let active = "activePluginID"
         static let primary = "primaryPluginID"
     }
@@ -56,13 +57,24 @@ final class PluginRegistry {
         }
 
         let known = Set(entries.map(\.id))
-        // A plugin removed from a build leaves its id behind in defaults;
-        // filtering against `known` keeps those ghosts out of the UI.
-        if let stored = defaults.array(forKey: Key.enabled) as? [String] {
-            enabledIDs = Set(stored).intersection(known)
+        let stored = defaults.array(forKey: Key.enabled) as? [String]
+        // Which plugins this install has ever been offered. Without it, a
+        // plugin added in a later release would be absent from the stored
+        // enabled list and so arrive switched off — indistinguishable, to the
+        // code, from one the user turned off on purpose. Upgraders would never
+        // see it. Falling back to the stored enabled list seeds this for
+        // installs that predate the key, so a plugin deliberately switched off
+        // before the upgrade stays off.
+        let seen = Set(defaults.array(forKey: Key.seen) as? [String] ?? stored ?? [])
+
+        if let stored {
+            // A plugin removed from a build leaves its id behind in defaults;
+            // intersecting with `known` keeps those ghosts out of the UI.
+            enabledIDs = Set(stored).intersection(known).union(known.subtracting(seen))
         } else {
             enabledIDs = known
         }
+        defaults.set(Array(known), forKey: Key.seen)
         activeID = defaults.string(forKey: Key.active).flatMap { known.contains($0) ? $0 : nil }
         primaryID = defaults.string(forKey: Key.primary).flatMap { known.contains($0) ? $0 : nil }
 

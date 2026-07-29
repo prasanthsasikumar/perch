@@ -14,6 +14,8 @@ packages:
     path: PerchKit
   MenuDoPlugin:
     path: Plugins/MenuDoPlugin
+  AnalyticsPlugin:
+    path: Plugins/AnalyticsPlugin
 targets:
   Perch:
     type: application
@@ -29,6 +31,8 @@ targets:
         product: PerchKit
       - package: MenuDoPlugin
         product: MenuDoPlugin
+      - package: AnalyticsPlugin
+        product: AnalyticsPlugin
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.ahlab.Perch
@@ -63,3 +67,5 @@ targets:
         product: PerchKit
       - package: MenuDoPlugin
         product: MenuDoPlugin
+      - package: AnalyticsPlugin
+        product: AnalyticsPlugin
