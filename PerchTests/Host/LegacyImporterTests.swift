@@ -174,6 +174,84 @@ final class LegacyImporterTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: tasksDestination.path))
     }
 
+    // MARK: - "The destination has data" must mean data, not a file
+
+    private func writeDestination(_ contents: String) {
+        try! FileManager.default.createDirectory(
+            at: tasksDestination.deletingLastPathComponent(), withIntermediateDirectories: true
+        )
+        try! Data(contents.utf8).write(to: tasksDestination)
+    }
+
+    func testAnEmptyDestinationIsImportedOver() {
+        // What a fresh Perch writes to this exact path the first time it quits.
+        // Treating it as "already has data" strands every user who has launched
+        // and quit once — which is all of them.
+        writeLegacyTasks()
+        writeDestination("[]")
+
+        XCTAssertEqual(
+            LegacyImporter.importTasksOutcome(from: tasksSource, to: tasksDestination),
+            .imported
+        )
+        XCTAssertEqual(
+            try? String(contentsOf: tasksDestination, encoding: .utf8),
+            #"[{"title":"Old task"}]"#
+        )
+    }
+
+    func testTheAutomaticRetryStillSucceedsAfterAQuitWroteAnEmptyList() {
+        // Path A end to end. Launch 1: the source is refused, so the import
+        // fails and is left to be retried.
+        writeLegacyTasks()
+        setPermissions(0, on: root.appendingPathComponent("old"))
+        XCTAssertFalse(performImport().importedTasks)
+        XCTAssertFalse(suite.bool(forKey: "legacyImportCompleted"))
+
+        // The user quits. Every flush path writes the empty in-memory list.
+        writeDestination("[]")
+
+        // Launch 2: access restored, and the retry must actually carry the
+        // tasks across rather than being turned away by its own leftovers.
+        restorePermissions()
+        XCTAssertTrue(performImport().importedTasks)
+        XCTAssertTrue(suite.bool(forKey: "legacyImportCompleted"))
+        XCTAssertEqual(
+            try? String(contentsOf: tasksDestination, encoding: .utf8),
+            #"[{"title":"Old task"}]"#
+        )
+    }
+
+    func testARealTaskListIsStillNeverOverwritten() {
+        writeLegacyTasks()
+        writeDestination(#"[{"title":"New task"}]"#)
+
+        XCTAssertEqual(
+            LegacyImporter.importTasksOutcome(from: tasksSource, to: tasksDestination),
+            .alreadyHasData
+        )
+        XCTAssertEqual(
+            try? String(contentsOf: tasksDestination, encoding: .utf8),
+            #"[{"title":"New task"}]"#
+        )
+    }
+
+    func testAnUndecodableDestinationCountsAsDataAndIsLeftAlone() {
+        // Might be a corrupt task list. Overwriting it would be exactly the
+        // unforgivable loss this importer exists to prevent.
+        writeLegacyTasks()
+        writeDestination("not json at all")
+
+        XCTAssertEqual(
+            LegacyImporter.importTasksOutcome(from: tasksSource, to: tasksDestination),
+            .alreadyHasData
+        )
+        XCTAssertEqual(
+            try? String(contentsOf: tasksDestination, encoding: .utf8),
+            "not json at all"
+        )
+    }
+
     // MARK: - "It isn't there" vs "I was refused"
 
     func testSourceStateTellsAnAbsentFileFromAnUnreadableOne() {

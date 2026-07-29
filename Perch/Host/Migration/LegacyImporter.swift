@@ -138,6 +138,27 @@ enum LegacyImporter {
         return access(url.path, R_OK) == 0 ? .present : .unreadable
     }
 
+    /// Whether the destination holds tasks worth protecting.
+    ///
+    /// Existence is the wrong question. A plugin that saves an empty list —
+    /// which every fresh Perch does the first time it quits, since `flush()`
+    /// writes unconditionally — leaves a file at this exact path. Reading that
+    /// as "already has data" retires the automatic retry the moment it becomes
+    /// needed, and turns the Settings import button into a no-op for anyone
+    /// who has ever launched and quit. So the file has to be opened.
+    ///
+    /// Anything that will not parse as an empty array counts as data. It might
+    /// be a corrupt task list, and destroying one to complete a migration is
+    /// the exact failure this importer exists to avoid — when in doubt, refuse.
+    static func destinationHoldsData(at url: URL) -> Bool {
+        guard FileManager.default.fileExists(atPath: url.path) else { return false }
+        guard let data = try? Data(contentsOf: url) else { return true }
+        guard let array = (try? JSONSerialization.jsonObject(with: data)) as? [Any] else {
+            return true
+        }
+        return !array.isEmpty
+    }
+
     /// Copies rather than moves, and refuses to touch a destination that
     /// already holds data — losing tasks to a migration would be unforgivable.
     ///
@@ -155,11 +176,16 @@ enum LegacyImporter {
         case .unreadable: return .failed
         case .present: break
         }
-        guard !fileManager.fileExists(atPath: destination.path) else { return .alreadyHasData }
+        guard !destinationHoldsData(at: destination) else { return .alreadyHasData }
         do {
             try fileManager.createDirectory(
                 at: destination.deletingLastPathComponent(), withIntermediateDirectories: true
             )
+            // Only an empty list can be sitting here — anything else was turned
+            // away above — and `copyItem` refuses an existing destination.
+            if fileManager.fileExists(atPath: destination.path) {
+                try fileManager.removeItem(at: destination)
+            }
             try fileManager.copyItem(at: source, to: destination)
             return .imported
         } catch {

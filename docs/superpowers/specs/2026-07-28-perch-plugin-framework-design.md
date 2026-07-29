@@ -263,8 +263,16 @@ The import is **non-destructive** (copies, never moves), **idempotent** (a
 completion flag in host defaults), and **refuses to run when the target already
 has data**.
 
-Two things the implementation had to get right that this section originally
+Three things the implementation had to get right that this section originally
 glossed over:
+
+- "**The target already has data**" has to mean data, not a file. A plugin
+  whose `flush()` writes unconditionally leaves an empty list at the
+  destination the first time Perch quits — so deciding this on file existence
+  retires the automatic retry the moment it is needed, and makes the Settings
+  import button a no-op for anyone who has ever launched and quit. The
+  destination is decoded; an empty array is importable, and anything that will
+  not parse is treated as data and left alone.
 
 - A **refused** read is not the same as **no legacy data**. `FileManager`
   reports both as "does not exist", and treating a refusal as "nothing to

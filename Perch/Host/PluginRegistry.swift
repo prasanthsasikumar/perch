@@ -111,16 +111,19 @@ final class PluginRegistry {
     /// button and from `NSApplication.willTerminateNotification`, so a plugin
     /// with debounced writes never has to hook the app lifecycle itself.
     ///
-    /// Only `enabled` plugins: a disabled one is not being shown or mutated,
-    /// and flushing it would write over a file the user may have edited.
+    /// Every entry, not just the enabled ones. Disabling a plugin hides it; it
+    /// does not destroy it, and it does not discard whatever the user typed
+    /// just before they switched it off. `flush()` means "the process is about
+    /// to die, write now" — that is true of a plugin regardless of whether its
+    /// tab is currently on screen.
     func flushAll() {
-        for entry in enabled { entry.plugin.flush() }
+        for entry in entries { entry.plugin.flush() }
     }
 
-    /// Tells one plugin its storage changed underneath it. Every entry, not
-    /// just the enabled ones — the legacy import can land on a plugin the user
-    /// happens to have switched off, and it must not read stale state if they
-    /// switch it back on.
+    /// Tells one plugin its storage changed underneath it. Like `flushAll`,
+    /// this reaches a disabled plugin — the legacy import can land on one the
+    /// user happens to have switched off, and it must not read stale state if
+    /// they switch it back on.
     func reload(id: String) {
         entries.first { $0.id == id }?.plugin.reload()
     }

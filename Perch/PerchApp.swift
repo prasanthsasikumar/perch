@@ -42,8 +42,13 @@ struct PerchApp: App {
         case .failed:
             state.notice = MigrationState.importFailedNotice
         case .nothingToImport, .alreadyHasData:
-            // Nothing to say: there was no MenuDo data, or Perch already had
-            // its own — neither leaves the user with an unexplained blank list.
+            // Deliberately silent. `.alreadyHasData` is decided by decoding the
+            // destination, not by its mere existence, so it now means Perch
+            // genuinely holds tasks — and a user looking at their own tasks
+            // does not need to be told a migration was skipped. In the one
+            // sub-case where that file is present but undecodable, the plugin
+            // itself says so via `TaskStore.loadFailureNotice`, which is the
+            // component that actually knows.
             break
         }
         _migration = State(initialValue: state)

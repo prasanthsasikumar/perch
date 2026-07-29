@@ -85,6 +85,84 @@ final class MigrationWiringTests: XCTestCase {
         registry.reload(id: "org.ahlab.perch.nonexistent")
     }
 
+    // MARK: - The Settings button's actual behaviour
+
+    /// Stands in for the file the user picks in the `NSOpenPanel`.
+    private func makeLegacySource(titled title: String) throws -> URL {
+        let url = directory.appendingPathComponent("legacy-\(UUID().uuidString).json")
+        try JSONEncoder().encode([TodoItem(title: title, sortOrder: 0)]).write(to: url)
+        return url
+    }
+
+    func testImportingThroughSettingsLeavesTheLivePluginHoldingTheImportedTasks() throws {
+        let plugin = MenuDo(context: context)
+        let registry = makeRegistry(plugin)
+        let migration = MigrationState()
+        let source = try makeLegacySource(titled: "Imported task")
+
+        let feedback = MenuDoImport.perform(
+            from: source, registry: registry, migration: migration, destination: tasksURL
+        )
+
+        // The reload is the whole point: without it the plugin still holds [].
+        XCTAssertEqual(plugin.store.items.map(\.title), ["Imported task"])
+        XCTAssertFalse(feedback.isFailure)
+        XCTAssertEqual(migration.notice, MigrationState.importedNotice)
+
+        // And the next save keeps them, rather than destroying them.
+        plugin.store.saveNow()
+        XCTAssertEqual(MenuDo(context: context).store.items.map(\.title), ["Imported task"])
+    }
+
+    func testImportingThroughSettingsWorksAfterAPreviousQuitWroteAnEmptyList() throws {
+        // The overwhelmingly common case: Perch has been launched and quit at
+        // least once, so an empty list is already sitting at the destination.
+        let plugin = MenuDo(context: context)
+        plugin.flush()
+        XCTAssertTrue(FileManager.default.fileExists(atPath: tasksURL.path))
+
+        let registry = makeRegistry(plugin)
+        let source = try makeLegacySource(titled: "Imported task")
+
+        let feedback = MenuDoImport.perform(
+            from: source, registry: registry, migration: MigrationState(), destination: tasksURL
+        )
+
+        XCTAssertEqual(feedback.message, "Imported — your tasks are in Perch now.")
+        XCTAssertEqual(plugin.store.items.map(\.title), ["Imported task"])
+    }
+
+    func testImportingThroughSettingsRefusesToTouchARealTaskList() throws {
+        let plugin = MenuDo(context: context)
+        plugin.store.add("Written in Perch")
+        plugin.flush()
+
+        let registry = makeRegistry(plugin)
+        let source = try makeLegacySource(titled: "Imported task")
+
+        let feedback = MenuDoImport.perform(
+            from: source, registry: registry, migration: MigrationState(), destination: tasksURL
+        )
+
+        XCTAssertEqual(feedback.message, "Nothing imported — Perch already has tasks saved.")
+        XCTAssertEqual(plugin.store.items.map(\.title), ["Written in Perch"])
+    }
+
+    func testAFailedImportSaysSoAndLeavesThePluginAlone() throws {
+        let plugin = MenuDo(context: context)
+        let registry = makeRegistry(plugin)
+
+        let feedback = MenuDoImport.perform(
+            from: directory.appendingPathComponent("no-such-file.json"),
+            registry: registry,
+            migration: MigrationState(),
+            destination: tasksURL
+        )
+
+        XCTAssertTrue(feedback.isFailure)
+        XCTAssertTrue(plugin.store.items.isEmpty)
+    }
+
     // MARK: - Quit must flush
 
     func testFlushAllPersistsWorkThePluginHadNotWrittenYet() {
@@ -102,15 +180,22 @@ final class MigrationWiringTests: XCTestCase {
         )
     }
 
-    func testFlushLeavesADisabledPluginsFileAlone() {
+    func testFlushReachesAPluginTheUserHasDisabled() {
+        // Disabling hides a plugin; it does not discard what the user typed
+        // just before switching it off. This used to assert the opposite, and
+        // the product never behaved that way — TaskStore's own willTerminate
+        // subscription flushed a disabled MenuDo regardless.
         let plugin = MenuDo(context: context)
         let registry = makeRegistry(plugin)
-        plugin.store.add("Unsaved")
+        plugin.store.add("Typed before switching the plugin off")
         registry.setEnabled(false, for: MenuDo.identifier)
 
         registry.flushAll()
 
-        XCTAssertFalse(FileManager.default.fileExists(atPath: tasksURL.path))
+        XCTAssertEqual(
+            MenuDo(context: context).store.items.map(\.title),
+            ["Typed before switching the plugin off"]
+        )
     }
 
     // MARK: - The importer's destination and the plugin's file are the same file
