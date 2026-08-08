@@ -439,4 +439,50 @@ final class WatchPollerTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(countAtStop, 3)
         XCTAssertEqual(source.calls.count, countAtStop)
     }
+
+    /// The behavioural companion to `MarketPluginTests`'
+    /// `testEnablingTwiceDoesNotLeaveTwoLoopsRunning`, which only asserts
+    /// `isRunning` (`loop != nil`). That is a nil check, not a behavioural
+    /// one: if `run()` did not cancel the previous loop before replacing
+    /// `loop`, the first loop would leak and keep polling forever, while
+    /// `stop()` — nilling whatever `loop` happens to point at — would still
+    /// make the assertion pass. This counts actual search calls instead, so
+    /// a leaked first loop shows up as calls that keep growing after `stop()`.
+    func testCallingRunTwiceDoesNotLeaveALeakedLoopStillPolling() async {
+        let store = makeStore()
+        store.addWatch(query: "GoPro", maxPrice: nil)
+        let source = FakeListingSource(results: [])
+        let calledThreeTimes = expectation(description: "tick ran at least three times")
+        calledThreeTimes.assertForOverFulfill = false
+        source.onSearch = {
+            if source.calls.count >= 3 { calledThreeTimes.fulfill() }
+        }
+        var reads = 0
+        let poller = WatchPoller(
+            store: store,
+            source: source,
+            clock: {
+                defer { reads += 1 }
+                return Date(timeIntervalSince1970: 1_000_000 + Double(reads) * 100_000)
+            },
+            jitter: { _, _ in 1.0 },
+            tickIntervalSeconds: 0.01
+        )
+
+        poller.run()
+        poller.run() // The double-enable under test: must not leak the first loop.
+        await fulfillment(of: [calledThreeTimes], timeout: 2.0)
+        poller.stop()
+        let countAtStop = source.calls.count
+
+        // Bounded, not blind: gives a leaked first loop a real chance to make
+        // another call, then confirms it did not. 0.2s against a 0.01s tick
+        // interval is twenty ticks' worth of headroom.
+        let staysQuiet = expectation(description: "no further calls once stopped")
+        staysQuiet.isInverted = true
+        await fulfillment(of: [staysQuiet], timeout: 0.2)
+
+        XCTAssertGreaterThanOrEqual(countAtStop, 3)
+        XCTAssertEqual(source.calls.count, countAtStop)
+    }
 }
