@@ -1,16 +1,28 @@
 import Foundation
+@testable import MarketPlugin
 import PerchKit
 
 enum MarketFixture {
+    /// Every directory handed out below, removed together when the test
+    /// process exits. Nothing was deleting these, so a full `swift test` run
+    /// left one directory per store behind in the system temp directory.
+    private static var directories: [URL] = []
+    private static let registerCleanup: Void = {
+        atexit {
+            for url in MarketFixture.directories {
+                try? FileManager.default.removeItem(at: url)
+            }
+        }
+    }()
+
     static func temporaryStorage() -> PluginStorage {
-        PluginStorage(
-            directory: FileManager.default.temporaryDirectory
-                .appendingPathComponent("MarketTests-\(UUID().uuidString)", isDirectory: true)
-        )
+        _ = registerCleanup
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("MarketTests-\(UUID().uuidString)", isDirectory: true)
+        directories.append(directory)
+        return PluginStorage(directory: directory)
     }
 }
-
-@testable import MarketPlugin
 
 /// A `ListingSource` whose answers are scripted, so the poller can be tested
 /// without a browser.
@@ -27,6 +39,10 @@ final class FakeListingSource: ListingSource {
     var error: SearchError?
     /// When set, only the first call fails; later calls succeed.
     var failFirstCallOnly = false
+    /// Runs synchronously inside `search`, before it returns — the way tests
+    /// simulate the MainActor servicing other work during the `await`, e.g.
+    /// a watch being paused, edited, or deleted mid-poll.
+    var onSearch: (() -> Void)?
     private(set) var calls: [Call] = []
 
     init(results: [ScrapedListing] = []) {
@@ -37,6 +53,7 @@ final class FakeListingSource: ListingSource {
         query: String, maxPrice: Int?, location: String, radiusKm: Int
     ) async throws -> [ScrapedListing] {
         calls.append(Call(query: query, maxPrice: maxPrice, location: location, radiusKm: radiusKm))
+        onSearch?()
         if let error {
             if failFirstCallOnly { self.error = nil }
             throw error
