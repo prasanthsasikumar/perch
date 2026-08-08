@@ -8,13 +8,22 @@ import Foundation
 final class InMemoryCredentialStore: CredentialStore, @unchecked Sendable {
     private let lock = NSLock()
     private var stored: Data?
+    private var _loadCount = 0
 
     init(seeded: ServiceAccount? = nil) {
         stored = seeded.flatMap { try? JSONEncoder().encode($0) }
     }
 
+    /// How many times `load()` has been called. Lets a test prove a store
+    /// never touches the Keychain merely by being constructed, and that a
+    /// credential genuinely needed is fetched at most once.
+    var loadCount: Int { lock.withLock { _loadCount } }
+
     func load() throws -> Data? {
-        lock.withLock { stored }
+        lock.withLock {
+            _loadCount += 1
+            return stored
+        }
     }
 
     func save(_ data: Data) throws {

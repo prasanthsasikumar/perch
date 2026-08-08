@@ -34,6 +34,61 @@ final class AnalyticsStoreTests: XCTestCase {
         XCTAssertEqual(store.credentialFailure, .notConfigured)
     }
 
+    /// The defect this fix removes: constructing a store used to read the
+    /// Keychain as a side effect of `init`, which fired every time the
+    /// `Analytics` plugin was built — including with the plugin switched off,
+    /// and including under an XCTest host — and Perch's ad-hoc signature
+    /// changes on every rebuild, so every launch re-triggered the Keychain's
+    /// "Perch wants to use your confidential information" prompt.
+    func testConstructingAStoreDoesNotReadTheCredentialStore() throws {
+        let credentials = try configuredCredentials()
+
+        _ = makeStore(credentials: credentials)
+
+        XCTAssertEqual(credentials.loadCount, 0)
+    }
+
+    /// `isConfigured` is one of the two places (alongside `refresh()`) that
+    /// must trigger the lazy load, since the panel and the settings pane both
+    /// read it synchronously in `body` to decide what to show — there is no
+    /// later async step where a load could still land in time.
+    func testIsConfiguredOnAStoreWithASeededCredentialStillReportsTrue() throws {
+        let store = makeStore(credentials: try configuredCredentials())
+
+        XCTAssertTrue(store.isConfigured)
+    }
+
+    /// The Keychain read is guarded by `didLoadCredential` so it happens at
+    /// most once no matter how many times the panel or settings pane ask.
+    func testTheCredentialIsReadAtMostOnceAcrossSeveralAccesses() throws {
+        let credentials = try configuredCredentials()
+        let store = makeStore(credentials: credentials)
+
+        _ = store.isConfigured
+        _ = store.clientEmail
+        _ = store.isConfigured
+
+        XCTAssertEqual(credentials.loadCount, 1)
+    }
+
+    /// Importing a credential must leave `didLoadCredential` in a state where
+    /// a later read reports the freshly imported credential rather than going
+    /// back to the Keychain — which, on a store that never lazily loaded
+    /// beforehand, would otherwise clobber what was just imported.
+    func testImportingThenReadingIsConfiguredReflectsTheImportedCredentialNotAStaleRead() throws {
+        let credentials = InMemoryCredentialStore()
+        let store = makeStore(credentials: credentials)
+
+        try store.importCredential(keyFile: try Fixture.serviceAccountJSON())
+
+        XCTAssertTrue(store.isConfigured)
+        XCTAssertEqual(store.clientEmail, "perch@example.iam.gserviceaccount.com")
+        // The import itself never called `load()`, and the `isConfigured`/
+        // `clientEmail` reads above must not have gone back to the Keychain
+        // either — `didLoadCredential` was already set by the import.
+        XCTAssertEqual(credentials.loadCount, 0)
+    }
+
     func testImportingAKeyConfiguresTheStore() throws {
         let credentials = InMemoryCredentialStore()
         let store = makeStore(credentials: credentials)

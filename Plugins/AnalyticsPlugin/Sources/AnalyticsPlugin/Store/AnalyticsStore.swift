@@ -45,6 +45,10 @@ public final class AnalyticsStore {
     private let now: () -> Date
 
     private var api: (any GoogleAnalyticsAPI)?
+    /// Whether `loadCredential()` has run yet. Guards it to at most once, so
+    /// every access after the first is a plain read rather than another trip
+    /// to the Keychain.
+    private var didLoadCredential = false
 
     public init(
         storage: PluginStorage,
@@ -58,14 +62,27 @@ public final class AnalyticsStore {
         self.now = now
 
         loadCache()
-        loadCredential()
+        // Deliberately not `loadCredential()`: constructing a store must not
+        // touch the Keychain. This runs whenever the `Analytics` plugin is
+        // constructed — including when the user has it switched off, and
+        // including when Perch is launched as an XCTest host — and Perch is
+        // ad-hoc signed, so every rebuild changes the code signature the
+        // Keychain ACL trusts, turning every launch into a "Perch wants to
+        // use your confidential information" prompt. The credential is read
+        // lazily instead, the first time something genuinely needs it.
     }
 
     // MARK: - Configuration
 
-    public var isConfigured: Bool { api != nil }
+    public var isConfigured: Bool {
+        loadCredentialIfNeeded()
+        return api != nil
+    }
 
-    public var clientEmail: String? { api?.clientEmail }
+    public var clientEmail: String? {
+        loadCredentialIfNeeded()
+        return api?.clientEmail
+    }
 
     /// Reads a service-account JSON, stores it, and starts using it.
     ///
@@ -83,6 +100,11 @@ public final class AnalyticsStore {
         try credentials.save(try JSONEncoder().encode(account))
         api = apiFactory(account)
         credentialFailure = nil
+        // The credential just written *is* the current truth: mark it loaded
+        // so a later `loadCredentialIfNeeded()` — triggered by, say, the next
+        // `isConfigured` read — does not go back to the Keychain and clobber
+        // what the user just imported with whatever it reads back.
+        didLoadCredential = true
     }
 
     public func removeCredential() throws {
@@ -95,6 +117,17 @@ public final class AnalyticsStore {
         lastRefreshed = nil
         credentialFailure = .notConfigured
         persist()
+        // As above: this is now the current truth (no credential), so later
+        // reads must not re-hit the Keychain looking for one.
+        didLoadCredential = true
+    }
+
+    /// Reads the Keychain at most once — the first time something genuinely
+    /// needs the credential — never merely because a store was constructed.
+    private func loadCredentialIfNeeded() {
+        guard !didLoadCredential else { return }
+        didLoadCredential = true
+        loadCredential()
     }
 
     private func loadCredential() {
@@ -138,6 +171,7 @@ public final class AnalyticsStore {
     }
 
     public func discoverProperties() async throws -> [AnalyticsProperty] {
+        loadCredentialIfNeeded()
         guard let api else { throw AnalyticsError.notConfigured }
         return try await api.discoverProperties()
     }
@@ -156,6 +190,7 @@ public final class AnalyticsStore {
     }
 
     public func refresh() async {
+        loadCredentialIfNeeded()
         guard let api else {
             credentialFailure = .notConfigured
             return
