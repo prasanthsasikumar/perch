@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct MarketSettingsView: View {
-    @Bindable var store: MarketStore
+    let store: MarketStore
 
     @State private var location = ""
     @State private var radiusKm = 50
@@ -13,6 +13,16 @@ struct MarketSettingsView: View {
             Section {
                 TextField("City", text: $location)
                     .onSubmit(apply)
+                    // `.onSubmit` alone only fires on Return. Nothing else
+                    // in this pane requires a keypress to take effect, and
+                    // this field is the plugin's only blocking prerequisite
+                    // — losing focus or closing the window must not discard
+                    // what was typed. `updateSettings` just mutates a
+                    // struct and schedules a debounced write, so applying
+                    // per keystroke is cheap, and `.onAppear` re-seeding
+                    // `location` below fires this once more with an
+                    // identical value, which is a no-op.
+                    .onChange(of: location) { apply() }
                 Text(
                     "Facebook scopes searches to a city. Use the slug from a "
                         + "Marketplace URL — the part after /marketplace/, like “auckland”."
@@ -40,6 +50,10 @@ struct MarketSettingsView: View {
 
                 Toggle("Notify me about new listings", isOn: $notificationsEnabled)
                     .onChange(of: notificationsEnabled) { apply() }
+                    .disabled(true)
+                Text("Coming soon — notifications aren't wired up yet.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             } header: {
                 Text("How often")
             }
