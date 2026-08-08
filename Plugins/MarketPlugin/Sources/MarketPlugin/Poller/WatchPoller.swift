@@ -20,10 +20,6 @@ public final class WatchPoller {
     public static let maxBackoffSeconds: TimeInterval = 7200
     public static let signInRetrySeconds: TimeInterval = 60
 
-    /// How often the loop wakes to see whether anything is due. Not the poll
-    /// interval — that is per watch, and much longer.
-    static let tickIntervalSeconds: TimeInterval = 30
-
     public private(set) var state: PollerState = .idle
     public private(set) var lastError: String?
 
@@ -32,6 +28,10 @@ public final class WatchPoller {
     private let clock: () -> Date
     private let jitter: (Double, Double) -> Double
     private let onFinds: ((UUID, Int) -> Void)?
+    /// How often the loop wakes to see whether anything is due. Not the poll
+    /// interval — that is per watch, and much longer. Injectable so a test
+    /// can exercise `run()`/`stop()` without a real 30-second wait.
+    private let tickIntervalSeconds: TimeInterval
     @ObservationIgnored private var loop: Task<Void, Never>?
 
     public init(
@@ -39,12 +39,14 @@ public final class WatchPoller {
         source: ListingSource,
         clock: @escaping () -> Date = { .now },
         jitter: @escaping (Double, Double) -> Double = { Double.random(in: $0...$1) },
+        tickIntervalSeconds: TimeInterval = 30,
         onFinds: ((UUID, Int) -> Void)? = nil
     ) {
         self.store = store
         self.source = source
         self.clock = clock
         self.jitter = jitter
+        self.tickIntervalSeconds = tickIntervalSeconds
         self.onFinds = onFinds
     }
 
@@ -54,15 +56,22 @@ public final class WatchPoller {
     public func tick() async -> [(UUID, Int)] {
         let now = clock()
         let due = store.watches.filter { !$0.paused && $0.nextCheckAt <= now }
-        guard !due.isEmpty else {
-            if state == .polling { state = .idle }
-            return []
-        }
+        // No `if state == .polling { state = .idle }` here: every exit below
+        // already leaves `state` at a terminal value (`.idle`, `.signedOut`,
+        // or `.backoff`) before `tick()` returns, and `run()`'s loop never
+        // overlaps two `tick()` calls — so `state` can never already be
+        // `.polling` when a fresh call starts.
+        guard !due.isEmpty else { return [] }
 
         state = .polling
         var results: [(UUID, Int)] = []
 
         for (position, watch) in due.enumerated() {
+            // `stop()` cancels the loop, but without this an in-flight
+            // `tick()` still runs every remaining due watch — with a real
+            // source and several watches, that leaves Perch loading pages
+            // for minutes after quit.
+            guard !Task.isCancelled else { return results }
             do {
                 let scraped = try await source.search(
                     query: watch.query,
@@ -70,8 +79,17 @@ public final class WatchPoller {
                     location: watch.location,
                     radiusKm: watch.radiusKm
                 )
+                // The MainActor served other work during that `await` — a
+                // watch paused, edited, or deleted while its own search was
+                // in flight must not have that change silently reverted by
+                // writing back the snapshot taken before the loop started.
+                // A deleted watch (not found here) records nothing rather
+                // than resurrecting it as an orphan.
+                guard let current = store.watches.first(where: { $0.id == watch.id }) else {
+                    continue
+                }
                 let fresh = store.record(scraped, for: watch.id)
-                reschedule(watch, after: interval(), failures: 0)
+                reschedule(current, after: interval(), failures: 0)
                 if !fresh.isEmpty {
                     results.append((watch.id, fresh.count))
                     onFinds?(watch.id, fresh.count)
@@ -84,19 +102,24 @@ public final class WatchPoller {
                 state = .signedOut
                 lastError = nil
                 for pending in due[position...] {
+                    guard let current = store.watches.first(where: { $0.id == pending.id })
+                    else { continue }
                     reschedule(
-                        pending,
+                        current,
                         after: Self.signInRetrySeconds,
-                        failures: pending.consecutiveFailures,
+                        failures: current.consecutiveFailures,
                         checked: false
                     )
                 }
                 return results
             } catch {
+                guard let current = store.watches.first(where: { $0.id == watch.id }) else {
+                    continue
+                }
                 state = .backoff
                 lastError = Self.describe(error)
-                let failures = watch.consecutiveFailures + 1
-                reschedule(watch, after: backoff(failures: failures), failures: failures)
+                let failures = current.consecutiveFailures + 1
+                reschedule(current, after: backoff(failures: failures), failures: failures)
                 continue
             }
         }
@@ -108,16 +131,21 @@ public final class WatchPoller {
         return results
     }
 
-    /// Runs `tick()` forever, waking every 30 seconds to see what is due.
-    /// Holds only a weak reference, so the loop exits once the plugin is
-    /// gone rather than spinning on a `nil` self forever.
+    /// Runs `tick()` forever, waking every `tickIntervalSeconds` to see
+    /// what is due.
+    ///
+    /// The loop binds `self` strongly only for the duration of `tick()` —
+    /// the `if let self { … } else { break }` scope ends before the sleep,
+    /// so nothing holds the poller alive across it. Once the plugin is
+    /// gone, the next wake finds `self` `nil` and the loop exits instead of
+    /// spinning forever.
     public func run() {
         loop?.cancel()
+        let tickIntervalSeconds = tickIntervalSeconds
         loop = Task { [weak self] in
             while !Task.isCancelled {
-                guard let self else { break }
-                await self.tick()
-                try? await Task.sleep(for: .seconds(Self.tickIntervalSeconds))
+                if let self { await self.tick() } else { break }
+                try? await Task.sleep(for: .seconds(tickIntervalSeconds))
             }
         }
     }
@@ -154,6 +182,9 @@ public final class WatchPoller {
 
     private static func describe(_ error: Error) -> String {
         if case SearchError.failed(let message) = error { return message }
-        return String(describing: error)
+        // Any other error type reaches the UI as-is otherwise — once Plan 2
+        // adds a real source, a `WKError`'s debug description would land in
+        // a user-facing caption.
+        return "Something went wrong while checking for listings."
     }
 }

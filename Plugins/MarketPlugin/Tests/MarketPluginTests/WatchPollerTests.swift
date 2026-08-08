@@ -302,6 +302,76 @@ final class WatchPollerTests: XCTestCase {
         XCTAssertTrue(seen.isEmpty)
     }
 
+    // MARK: - Staleness across the await (I3)
+
+    func testAWatchDeletedMidPollRecordsNothingAndLeavesNoOrphanListings() async {
+        let store = makeStore()
+        let watch = store.addWatch(query: "GoPro", maxPrice: nil)!
+        let source = FakeListingSource(results: [scraped("a")])
+        source.onSearch = { [store] in store.deleteWatch(id: watch.id) }
+        let poller = makePoller(store: store, source: source)
+
+        let results = await poller.tick()
+
+        XCTAssertTrue(results.isEmpty)
+        XCTAssertTrue(store.watches.isEmpty)
+        XCTAssertTrue(store.listings(for: watch.id).isEmpty)
+    }
+
+    func testAWatchPausedMidPollStaysPausedAfterTheTickCompletes() async {
+        let store = makeStore()
+        let watch = store.addWatch(query: "GoPro", maxPrice: nil)!
+        let source = FakeListingSource(results: [scraped("a")])
+        source.onSearch = { [store] in
+            var paused = watch
+            paused.paused = true
+            store.update(paused)
+        }
+        let poller = makePoller(store: store, source: source)
+
+        _ = await poller.tick()
+
+        XCTAssertEqual(store.watches.first?.paused, true)
+    }
+
+    func testAWatchEditedMidPollKeepsTheEditRatherThanTheStaleSnapshot() async {
+        // Reschedule must write the CURRENT value, not the one captured
+        // before the `await` — otherwise an edit made while a search is in
+        // flight is silently reverted the moment that search returns.
+        let store = makeStore()
+        let watch = store.addWatch(query: "GoPro", maxPrice: nil)!
+        let source = FakeListingSource(results: [])
+        source.onSearch = { [store] in
+            var edited = watch
+            edited.query = "GoPro Hero 12"
+            store.update(edited)
+        }
+        let poller = makePoller(store: store, source: source)
+
+        _ = await poller.tick()
+
+        XCTAssertEqual(store.watches.first?.query, "GoPro Hero 12")
+    }
+
+    // MARK: - Cancellation mid-tick (I4)
+
+    func testTickStopsBetweenWatchesOnceCancelled() async {
+        let store = makeStore()
+        let source = FakeListingSource(results: [])
+        store.addWatch(query: "first", maxPrice: nil)
+        store.addWatch(query: "second", maxPrice: nil)
+        let poller = makePoller(store: store, source: source)
+
+        var task: Task<[(UUID, Int)], Never>!
+        // Cancels while the first watch's search is still "in flight" —
+        // proves the check runs BETWEEN watches, not just once up front.
+        source.onSearch = { task.cancel() }
+        task = Task { await poller.tick() }
+        _ = await task.value
+
+        XCTAssertEqual(source.calls.count, 1)
+    }
+
     func testTheConfiguredIntervalIsHonouredAboveTheFloor() async {
         let store = makeStore()
         store.updateSettings(
@@ -315,5 +385,52 @@ final class WatchPollerTests: XCTestCase {
         XCTAssertEqual(
             store.watches.first!.nextCheckAt.timeIntervalSince(clock.now), 3600, accuracy: 0.5
         )
+    }
+
+    // MARK: - run() / stop() (I2)
+
+    func testRunLoopsCallingTickRepeatedlyAndStopHaltsIt() async {
+        // `run()`'s loop sleeps for real between ticks, so unlike every
+        // other test in this file this one can't stay on a clock that never
+        // moves on its own — `tickIntervalSeconds` exists specifically to
+        // make that real wait tiny and bounded instead of the production 30
+        // seconds. The clock still never touches the system clock: each
+        // read just jumps far enough ahead (well past the 10-minute floor)
+        // that the one watch is due again on the very next tick. This test
+        // is about proving the LOOP fires repeatedly and `stop()` halts it
+        // — the scheduling math itself is covered elsewhere in this file on
+        // a clock that only moves when a test advances it.
+        let store = makeStore()
+        store.addWatch(query: "GoPro", maxPrice: nil)
+        let source = FakeListingSource(results: [])
+        let calledThreeTimes = expectation(description: "tick ran at least three times")
+        source.onSearch = {
+            if source.calls.count >= 3 { calledThreeTimes.fulfill() }
+        }
+        var reads = 0
+        let poller = WatchPoller(
+            store: store,
+            source: source,
+            clock: {
+                defer { reads += 1 }
+                return Date(timeIntervalSince1970: 1_000_000 + Double(reads) * 100_000)
+            },
+            jitter: { _, _ in 1.0 },
+            tickIntervalSeconds: 0.01
+        )
+
+        poller.run()
+        await fulfillment(of: [calledThreeTimes], timeout: 2.0)
+        poller.stop()
+        let countAtStop = source.calls.count
+
+        // Bounded, not blind: gives a still-running loop a real chance to
+        // make another call, then confirms it did not.
+        let staysQuiet = expectation(description: "no further calls once stopped")
+        staysQuiet.isInverted = true
+        await fulfillment(of: [staysQuiet], timeout: 0.2)
+
+        XCTAssertGreaterThanOrEqual(countAtStop, 3)
+        XCTAssertEqual(source.calls.count, countAtStop)
     }
 }
