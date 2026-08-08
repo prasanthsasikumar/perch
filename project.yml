@@ -16,6 +16,8 @@ packages:
     path: Plugins/MenuDoPlugin
   AnalyticsPlugin:
     path: Plugins/AnalyticsPlugin
+  MarketPlugin:
+    path: Plugins/MarketPlugin
 targets:
   Perch:
     type: application
@@ -33,6 +35,8 @@ targets:
         product: MenuDoPlugin
       - package: AnalyticsPlugin
         product: AnalyticsPlugin
+      - package: MarketPlugin
+        product: MarketPlugin
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.ahlab.Perch
@@ -69,3 +73,5 @@ targets:
         product: MenuDoPlugin
       - package: AnalyticsPlugin
         product: AnalyticsPlugin
+      - package: MarketPlugin
+        product: MarketPlugin
