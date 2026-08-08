@@ -32,8 +32,11 @@ final class PluginRegistry {
     private var enabledIDs: Set<String> {
         didSet {
             persistEnabledIDs()
-            notifyEnabledChanges(from: oldValue)
+            // Selections are settled before plugins are notified, so a
+            // plugin's `setEnabled` never sees `activeID` still naming a
+            // plugin that was just switched off.
             reconcileSelections()
+            notifyEnabledChanges(from: oldValue)
         }
     }
 

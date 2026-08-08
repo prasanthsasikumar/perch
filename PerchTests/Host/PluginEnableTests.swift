@@ -78,6 +78,26 @@ final class PluginEnableTests: XCTestCase {
         XCTAssertEqual(other.calls, [true])
     }
 
+    /// The subtle case `PluginRegistry`'s own comment calls out: a plugin
+    /// present in this build but absent from both `seenPluginIDs` and
+    /// `enabledPluginIDs` looks, from stored state alone, indistinguishable
+    /// from one the user turned off — except it never existed for them to
+    /// turn off. It must default to enabled, the same as a genuinely fresh
+    /// install.
+    func testAPluginNewToThisBuildIsToldItIsEnabledAtStartup() {
+        let defaults = makeDefaults()
+        let plugin = RecordingPlugin(context: context(RecordingPlugin.identifier))
+        let other = OtherRecordingPlugin(context: context(OtherRecordingPlugin.identifier))
+        // Only `other` was known to this install before the upgrade that
+        // added `plugin`.
+        defaults.set([OtherRecordingPlugin.identifier], forKey: "seenPluginIDs")
+        defaults.set([OtherRecordingPlugin.identifier], forKey: "enabledPluginIDs")
+
+        _ = PluginRegistry(plugins: [plugin, other], defaults: defaults)
+
+        XCTAssertEqual(plugin.calls, [true])
+    }
+
     func testDisablingNotifiesThePlugin() {
         let plugin = RecordingPlugin(context: context(RecordingPlugin.identifier))
         let other = OtherRecordingPlugin(context: context(OtherRecordingPlugin.identifier))

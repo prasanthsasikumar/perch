@@ -55,6 +55,13 @@ public protocol PerchPlugin: AnyObject, Observable {
     /// hiding is not stopping: without this, a switched-off plugin keeps
     /// talking to the network on a user who thought they had turned it off.
     ///
+    /// The other half of that contract: a plugin must not start that
+    /// background work in `init`. The host constructs every plugin before it
+    /// tells any of them their enabled state, so work started in `init` runs
+    /// at least once even for a plugin the user has switched off. Nothing in
+    /// the host can enforce this — this doc comment is the only enforcement
+    /// there is.
+    ///
     /// Stored state is left alone. Disabling is not deleting, and re-enabling
     /// should pick up where the plugin left off.
     ///

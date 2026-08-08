@@ -542,9 +542,8 @@ Report this as a check for the user to run themselves:
 3. Switch it back on and confirm the tab returns and the plugin still works.
 4. Do the same for **Market**.
 
-The loop behaviour itself is covered by the tests above; this is only checking that the toggle still behaves and nothing crashes on the transition.
-toggle still behaves correctly and nothing crashes on the transition — the loop
-behaviour itself is covered by the tests above. Report what you observed.
+This only checks that the toggle still behaves correctly and nothing crashes
+on the transition — the loop behaviour itself is covered by the tests above.
 
 - [ ] **Step 10: Commit**
 
