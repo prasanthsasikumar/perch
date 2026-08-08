@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - macOS 14, `swift-tools-version: 5.9`, matching the other plugin packages.
-- Tests are **XCTest**, in `PerchTests/Plugins/Market/`. Plugin packages carry no test targets of their own — that is the existing convention and this plan does not change it.
+- Tests are **XCTest**, in the package's own test target at `Plugins/MarketPlugin/Tests/MarketPluginTests/`, run with `swift test`. This is a deliberate departure from Perch's convention of putting every test in the app-hosted `PerchTests` target: that suite currently **hangs on this machine** — `xcodebuild` launches `Perch.app` and the runner never connects, failing after ~345 seconds. Verified against a clean checkout at `HEAD`, so it predates this work and affects the existing Tasks and Analytics tests too. Package tests need no app host and run in seconds. Anything genuinely host-dependent belongs in `PerchTests` for when that is fixed; Plan 1 has none.
 - **No test may touch the network, launch a browser, or write outside a temporary directory.** Plan 1 contains no networking code at all.
 - Plugin identifier is `org.ahlab.perch.market` and must never change — it names the storage directory and the `UserDefaults` prefix.
 - Display name **Market**, SF Symbol **`binoculars`**, capabilities `.network` and `.notifications`.
@@ -28,17 +28,21 @@
 The whole suite:
 
 ```bash
-xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=macOS' 2>&1 | tail -20
+swift test --package-path Plugins/MarketPlugin
 ```
 
 A single class, which is what you want while iterating:
 
 ```bash
-xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=macOS' \
-  -only-testing:PerchTests/MarketStoreTests 2>&1 | tail -20
+swift test --package-path Plugins/MarketPlugin --filter MarketStoreTests
 ```
 
-`xcodebuild` is verbose; piping through `tail` keeps the signal. A pass ends with `** TEST SUCCEEDED **`.
+Both take seconds. **Do not run these in the background** — run them in the
+foreground and let them block.
+
+Do not reach for `xcodebuild test`. It hangs on this machine for reasons that
+have nothing to do with this plugin, and waiting on it is how the first attempt
+at Task 1 stalled twice.
 
 ---
 
@@ -50,7 +54,7 @@ xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=ma
 - Create: `Plugins/MarketPlugin/Sources/MarketPlugin/Models/Listing.swift`
 - Create: `Plugins/MarketPlugin/Sources/MarketPlugin/Models/MarketSettings.swift`
 - Modify: `project.yml`
-- Test: `PerchTests/Plugins/Market/ModelTests.swift`
+- Test: `Plugins/MarketPlugin/Tests/MarketPluginTests/ModelTests.swift`
 
 **Interfaces:**
 - Consumes: `PerchKit` only.
@@ -74,10 +78,21 @@ let package = Package(
         .package(path: "../../PerchKit")
     ],
     targets: [
-        .target(name: "MarketPlugin", dependencies: ["PerchKit"])
+        .target(name: "MarketPlugin", dependencies: ["PerchKit"]),
+        // PerchKit is listed explicitly even though MarketPlugin already
+        // depends on it: later tests construct a PluginContext and a
+        // PluginStorage directly, and relying on a transitive import is
+        // fragile.
+        .testTarget(name: "MarketPluginTests", dependencies: ["MarketPlugin", "PerchKit"]),
     ]
 )
 ```
+
+The test target is the one place this package differs from `MenuDoPlugin` and
+`AnalyticsPlugin`. Perch's convention puts every test in the app-hosted
+`PerchTests` target, but that suite does not currently run on this machine —
+see Global Constraints. These tests need no app host, so they live here and
+run in seconds.
 
 - [ ] **Step 2: Register the package with the Xcode project**
 
@@ -95,7 +110,7 @@ Add to the `Perch` target's `dependencies:`:
         product: MarketPlugin
 ```
 
-And to the `PerchTests` target's `dependencies:`, the same two lines.
+Add the same two lines to the `PerchTests` target's `dependencies:` too — the app-hosted suite does not run this plugin's tests, but Plan 2 may add host-level ones and the dependency costs nothing.
 
 Then regenerate:
 
@@ -105,7 +120,7 @@ xcodegen generate
 
 - [ ] **Step 3: Write the failing test**
 
-`PerchTests/Plugins/Market/ModelTests.swift`:
+`Plugins/MarketPlugin/Tests/MarketPluginTests/ModelTests.swift`:
 
 ```swift
 import Foundation
@@ -186,7 +201,7 @@ final class ModelTests: XCTestCase {
 
 - [ ] **Step 4: Run it to verify it fails**
 
-Run: `xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=macOS' -only-testing:PerchTests/ModelTests 2>&1 | tail -20`
+Run: `swift test --package-path Plugins/MarketPlugin --filter ModelTests`
 Expected: FAIL — `no such module 'MarketPlugin'` or `cannot find 'Watch' in scope`
 
 - [ ] **Step 5: Write the models**
@@ -320,13 +335,13 @@ public struct MarketSettings: Codable, Equatable {
 
 - [ ] **Step 6: Run the tests to verify they pass**
 
-Run: `xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=macOS' -only-testing:PerchTests/ModelTests 2>&1 | tail -20`
+Run: `swift test --package-path Plugins/MarketPlugin --filter ModelTests`
 Expected: `** TEST SUCCEEDED **`, 6 tests
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add Plugins/MarketPlugin project.yml PerchTests/Plugins/Market Perch.xcodeproj
+git add Plugins/MarketPlugin project.yml
 git commit -m "feat: Market plugin package and models"
 ```
 
@@ -338,7 +353,7 @@ This is the correctness claim the whole plugin rests on: a listing is reported e
 
 **Files:**
 - Create: `Plugins/MarketPlugin/Sources/MarketPlugin/Store/NewListings.swift`
-- Test: `PerchTests/Plugins/Market/NewListingsTests.swift`
+- Test: `Plugins/MarketPlugin/Tests/MarketPluginTests/NewListingsTests.swift`
 
 **Interfaces:**
 - Consumes: nothing from earlier tasks.
@@ -346,7 +361,7 @@ This is the correctness claim the whole plugin rests on: a listing is reported e
 
 - [ ] **Step 1: Write the failing test**
 
-`PerchTests/Plugins/Market/NewListingsTests.swift`:
+`Plugins/MarketPlugin/Tests/MarketPluginTests/NewListingsTests.swift`:
 
 ```swift
 import Foundation
@@ -410,7 +425,7 @@ final class NewListingsTests: XCTestCase {
 
 - [ ] **Step 2: Run it to verify it fails**
 
-Run: `xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=macOS' -only-testing:PerchTests/NewListingsTests 2>&1 | tail -20`
+Run: `swift test --package-path Plugins/MarketPlugin --filter NewListingsTests`
 Expected: FAIL — `cannot find 'ScrapedListing' in scope`
 
 - [ ] **Step 3: Write the implementation**
@@ -467,13 +482,13 @@ public func newListings(
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=macOS' -only-testing:PerchTests/NewListingsTests 2>&1 | tail -20`
+Run: `swift test --package-path Plugins/MarketPlugin --filter NewListingsTests`
 Expected: `** TEST SUCCEEDED **`, 7 tests
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add Plugins/MarketPlugin/Sources/MarketPlugin/Store/NewListings.swift PerchTests/Plugins/Market/NewListingsTests.swift
+git add Plugins/MarketPlugin/Sources/MarketPlugin/Store/NewListings.swift Plugins/MarketPlugin/Tests/MarketPluginTests/NewListingsTests.swift
 git commit -m "feat: new-vs-seen diff"
 ```
 
@@ -484,8 +499,8 @@ git commit -m "feat: new-vs-seen diff"
 **Files:**
 - Create: `Plugins/MarketPlugin/Sources/MarketPlugin/Store/MarketDocument.swift`
 - Create: `Plugins/MarketPlugin/Sources/MarketPlugin/Store/MarketStore.swift`
-- Test: `PerchTests/Plugins/Market/MarketStoreTests.swift`
-- Test: `PerchTests/Plugins/Market/MarketTestSupport.swift`
+- Test: `Plugins/MarketPlugin/Tests/MarketPluginTests/MarketStoreTests.swift`
+- Test: `Plugins/MarketPlugin/Tests/MarketPluginTests/MarketTestSupport.swift`
 
 **Interfaces:**
 - Consumes: `Watch`, `Listing`, `MarketSettings`, `ScrapedListing`, `newListings`.
@@ -493,7 +508,7 @@ git commit -m "feat: new-vs-seen diff"
 
 - [ ] **Step 1: Write the failing test**
 
-`PerchTests/Plugins/Market/MarketTestSupport.swift`. Note the `scraped(_:title:)`
+`Plugins/MarketPlugin/Tests/MarketPluginTests/MarketTestSupport.swift`. Note the `scraped(_:title:)`
 helper you need here was already defined at file scope in
 `NewListingsTests.swift` in Task 2 — it is visible across the whole test target,
 so import nothing and do not redefine it:
@@ -512,7 +527,7 @@ enum MarketFixture {
 }
 ```
 
-`PerchTests/Plugins/Market/MarketStoreTests.swift`:
+`Plugins/MarketPlugin/Tests/MarketPluginTests/MarketStoreTests.swift`:
 
 ```swift
 import Foundation
@@ -717,7 +732,7 @@ final class MarketStoreTests: XCTestCase {
 
 - [ ] **Step 2: Run it to verify it fails**
 
-Run: `xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=macOS' -only-testing:PerchTests/MarketStoreTests 2>&1 | tail -20`
+Run: `swift test --package-path Plugins/MarketPlugin --filter MarketStoreTests`
 Expected: FAIL — `cannot find 'MarketStore' in scope`
 
 - [ ] **Step 3: Write the document type**
@@ -916,7 +931,7 @@ public final class MarketStore {
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
-Run: `xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=macOS' -only-testing:PerchTests/MarketStoreTests 2>&1 | tail -20`
+Run: `swift test --package-path Plugins/MarketPlugin --filter MarketStoreTests`
 Expected: `** TEST SUCCEEDED **`, 20 tests
 
 Note `testStateSurvivesAReload` calls `saveNow()` explicitly rather than waiting on the debounce — a test that sleeps for a debounce is a slow test and a flaky one.
@@ -924,7 +939,7 @@ Note `testStateSurvivesAReload` calls `saveNow()` explicitly rather than waiting
 - [ ] **Step 6: Commit**
 
 ```bash
-git add Plugins/MarketPlugin/Sources/MarketPlugin/Store PerchTests/Plugins/Market
+git add Plugins/MarketPlugin
 git commit -m "feat: Market store with debounced persistence"
 ```
 
@@ -937,8 +952,8 @@ Everything that will eventually touch Facebook goes behind `ListingSource` here.
 **Files:**
 - Create: `Plugins/MarketPlugin/Sources/MarketPlugin/Session/ListingSource.swift`
 - Create: `Plugins/MarketPlugin/Sources/MarketPlugin/Poller/WatchPoller.swift`
-- Test: `PerchTests/Plugins/Market/WatchPollerTests.swift`
-- Modify: `PerchTests/Plugins/Market/MarketTestSupport.swift`
+- Test: `Plugins/MarketPlugin/Tests/MarketPluginTests/WatchPollerTests.swift`
+- Modify: `Plugins/MarketPlugin/Tests/MarketPluginTests/MarketTestSupport.swift`
 
 **Interfaces:**
 - Consumes: `MarketStore`, `Watch`, `ScrapedListing`.
@@ -946,7 +961,7 @@ Everything that will eventually touch Facebook goes behind `ListingSource` here.
 
 - [ ] **Step 1: Write the failing test**
 
-Append to `PerchTests/Plugins/Market/MarketTestSupport.swift`:
+Append to `Plugins/MarketPlugin/Tests/MarketPluginTests/MarketTestSupport.swift`:
 
 ```swift
 @testable import MarketPlugin
@@ -998,7 +1013,7 @@ final class FakeClock {
 }
 ```
 
-`PerchTests/Plugins/Market/WatchPollerTests.swift`:
+`Plugins/MarketPlugin/Tests/MarketPluginTests/WatchPollerTests.swift`:
 
 ```swift
 import Foundation
@@ -1323,7 +1338,7 @@ final class WatchPollerTests: XCTestCase {
 
 - [ ] **Step 2: Run it to verify it fails**
 
-Run: `xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=macOS' -only-testing:PerchTests/WatchPollerTests 2>&1 | tail -20`
+Run: `swift test --package-path Plugins/MarketPlugin --filter WatchPollerTests`
 Expected: FAIL — `cannot find 'WatchPoller' in scope`
 
 - [ ] **Step 3: Write the source protocol**
@@ -1520,13 +1535,13 @@ public final class WatchPoller {
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
-Run: `xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=macOS' -only-testing:PerchTests/WatchPollerTests 2>&1 | tail -20`
+Run: `swift test --package-path Plugins/MarketPlugin --filter WatchPollerTests`
 Expected: `** TEST SUCCEEDED **`, 21 tests
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add Plugins/MarketPlugin/Sources/MarketPlugin/Session Plugins/MarketPlugin/Sources/MarketPlugin/Poller PerchTests/Plugins/Market
+git add Plugins/MarketPlugin
 git commit -m "feat: listing source seam and the watch poller"
 ```
 
@@ -1540,7 +1555,7 @@ After this task, Market is a real tab in Perch.
 - Create: `Plugins/MarketPlugin/Sources/MarketPlugin/Market.swift`
 - Create: `Plugins/MarketPlugin/Sources/MarketPlugin/Session/StubListingSource.swift`
 - Modify: `Perch/PerchApp.swift`
-- Test: `PerchTests/Plugins/Market/MarketPluginTests.swift`
+- Test: `Plugins/MarketPlugin/Tests/MarketPluginTests/MarketPluginTests.swift`
 
 **Interfaces:**
 - Consumes: `MarketStore`, `WatchPoller`, `ListingSource`, `PerchKit`.
@@ -1548,7 +1563,7 @@ After this task, Market is a real tab in Perch.
 
 - [ ] **Step 1: Write the failing test**
 
-`PerchTests/Plugins/Market/MarketPluginTests.swift`:
+`Plugins/MarketPlugin/Tests/MarketPluginTests/MarketPluginTests.swift`:
 
 ```swift
 import Foundation
@@ -1624,7 +1639,7 @@ final class MarketPluginTests: XCTestCase {
 
 - [ ] **Step 2: Run it to verify it fails**
 
-Run: `xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=macOS' -only-testing:PerchTests/MarketPluginTests 2>&1 | tail -20`
+Run: `swift test --package-path Plugins/MarketPlugin --filter MarketPluginTests`
 Expected: FAIL — `cannot find 'Market' in scope`
 
 - [ ] **Step 3: Write the stub source**
@@ -1763,7 +1778,7 @@ and add the third entry to `makePlugins()`:
 
 - [ ] **Step 6: Run the tests to verify they pass**
 
-Run: `xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=macOS' -only-testing:PerchTests/MarketPluginTests 2>&1 | tail -20`
+Run: `swift test --package-path Plugins/MarketPlugin --filter MarketPluginTests`
 Expected: `** TEST SUCCEEDED **`, 5 tests
 
 - [ ] **Step 7: Verify the tab appears**
@@ -1780,7 +1795,7 @@ Do not mark this step done without seeing the tab.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add Plugins/MarketPlugin Perch/PerchApp.swift PerchTests/Plugins/Market
+git add Plugins/MarketPlugin Perch/PerchApp.swift
 git commit -m "feat: register Market as a third Perch tab"
 ```
 
@@ -1793,7 +1808,7 @@ git commit -m "feat: register Market as a third Perch tab"
 - Modify: `Plugins/MarketPlugin/Sources/MarketPlugin/Views/MarketPanelView.swift`
 - Modify: `Plugins/MarketPlugin/Sources/MarketPlugin/Views/MarketSettingsView.swift`
 - Create: `Plugins/MarketPlugin/Sources/MarketPlugin/Views/WatchRowView.swift`
-- Test: `PerchTests/Plugins/Market/RelativeTimeTests.swift`
+- Test: `Plugins/MarketPlugin/Tests/MarketPluginTests/RelativeTimeTests.swift`
 
 **Interfaces:**
 - Consumes: `MarketStore`, `WatchPoller`, `Watch`, `Listing`.
@@ -1801,7 +1816,7 @@ git commit -m "feat: register Market as a third Perch tab"
 
 - [ ] **Step 1: Write the failing test**
 
-`PerchTests/Plugins/Market/RelativeTimeTests.swift`:
+`Plugins/MarketPlugin/Tests/MarketPluginTests/RelativeTimeTests.swift`:
 
 ```swift
 import Foundation
@@ -1838,7 +1853,7 @@ final class RelativeTimeTests: XCTestCase {
 
 - [ ] **Step 2: Run it to verify it fails**
 
-Run: `xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=macOS' -only-testing:PerchTests/RelativeTimeTests 2>&1 | tail -20`
+Run: `swift test --package-path Plugins/MarketPlugin --filter RelativeTimeTests`
 Expected: FAIL — `cannot find 'RelativeTime' in scope`
 
 - [ ] **Step 3: Write the helper**
@@ -1867,7 +1882,7 @@ enum RelativeTime {
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=macOS' -only-testing:PerchTests/RelativeTimeTests 2>&1 | tail -20`
+Run: `swift test --package-path Plugins/MarketPlugin --filter RelativeTimeTests`
 Expected: `** TEST SUCCEEDED **`, 5 tests
 
 - [ ] **Step 5: Write the watch row**
@@ -2127,7 +2142,7 @@ struct MarketSettingsView: View {
 
 - [ ] **Step 8: Run the whole suite**
 
-Run: `xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=macOS' 2>&1 | tail -20`
+Run: `swift test --package-path Plugins/MarketPlugin`
 Expected: `** TEST SUCCEEDED **`, with the existing Tasks and Analytics tests still passing
 
 - [ ] **Step 9: Verify it works in the app**
@@ -2145,7 +2160,7 @@ Do not mark this step done without doing all five. Step 5 in particular is the o
 - [ ] **Step 10: Commit**
 
 ```bash
-git add Plugins/MarketPlugin/Sources/MarketPlugin/Views PerchTests/Plugins/Market/RelativeTimeTests.swift
+git add Plugins/MarketPlugin/Sources/MarketPlugin/Views Plugins/MarketPlugin/Tests/MarketPluginTests/RelativeTimeTests.swift
 git commit -m "feat: Market panel and settings"
 ```
 
