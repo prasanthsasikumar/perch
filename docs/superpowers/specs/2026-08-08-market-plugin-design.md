@@ -208,7 +208,15 @@ not an acceptable output.
 
 ## Testing
 
-Added to the existing `PerchTests` target.
+Split by what each test needs. Pure logic — the diff, the poller's scheduling,
+the store's persistence, `RelativeTime` — lives in `MarketPlugin`'s own test
+target and runs with `swift test` in about a quarter of a second. Anything that
+genuinely needs the app host, notably Plan 2's `WKWebView` fixture tests, goes
+in `PerchTests` alongside the Tasks and Analytics tests, which run fine (164
+tests, 3.5s, verified 2026-08-08).
+
+This is a departure from Perch's one-target convention, taken for loop speed
+rather than necessity.
 
 - `NewListings` is a free function over two collections, tested directly. A
   listing must be reported exactly once — never missed, never announced twice.
