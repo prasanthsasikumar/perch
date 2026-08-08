@@ -109,12 +109,14 @@ public final class WatchPoller {
     }
 
     /// Runs `tick()` forever, waking every 30 seconds to see what is due.
-    /// Holds only a weak reference, so it returns once the plugin is gone.
+    /// Holds only a weak reference, so the loop exits once the plugin is
+    /// gone rather than spinning on a `nil` self forever.
     public func run() {
         loop?.cancel()
         loop = Task { [weak self] in
             while !Task.isCancelled {
-                await self?.tick()
+                guard let self else { break }
+                await self.tick()
                 try? await Task.sleep(for: .seconds(Self.tickIntervalSeconds))
             }
         }
