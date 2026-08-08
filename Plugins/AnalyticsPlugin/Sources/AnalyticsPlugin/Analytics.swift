@@ -16,21 +16,35 @@ public final class Analytics: PerchPlugin {
     public static let capabilities: Set<PluginCapability> = [.network, .credentials]
 
     /// Half-hourly. GA4 does not update fast enough to reward anything
-    /// tighter, and the panel refetches on open regardless.
-    static let refreshInterval: TimeInterval = 30 * 60
+    /// tighter, and the panel refetches on open regardless. Public so it can
+    /// serve as the default argument of the testable initializer below.
+    public static let defaultRefreshInterval: TimeInterval = 30 * 60
 
     public let store: AnalyticsStore
+    private let refreshInterval: TimeInterval
 
-    private var refreshTask: Task<Void, Never>?
+    @ObservationIgnored private var refreshTask: Task<Void, Never>?
 
-    public required init(context: PluginContext) {
-        store = AnalyticsStore(
-            storage: context.storage,
-            credentials: KeychainCredentialStore(
-                service: Self.identifier,
-                account: "serviceAccount"
+    public required convenience init(context: PluginContext) {
+        self.init(
+            store: AnalyticsStore(
+                storage: context.storage,
+                credentials: KeychainCredentialStore(
+                    service: Self.identifier,
+                    account: "serviceAccount"
+                )
             )
         )
+    }
+
+    /// The testable initializer. Tests pass an in-memory store — the
+    /// production path is the only place a `KeychainCredentialStore` is
+    /// constructed, so tests never touch the Keychain — and, when the
+    /// refresh loop itself is under test, a short `refreshInterval` so the
+    /// loop can be observed without a real half-hour wait.
+    public init(store: AnalyticsStore, refreshInterval: TimeInterval = Analytics.defaultRefreshInterval) {
+        self.store = store
+        self.refreshInterval = refreshInterval
     }
 
     public var panel: AnyView {
@@ -63,8 +77,11 @@ public final class Analytics: PerchPlugin {
     /// between a refresh landing and the process dying.
     public func flush() { store.saveNow() }
 
-    /// Whether the background refresh loop is live.
-    public var isRefreshing: Bool { refreshTask != nil }
+    /// Whether the background refresh loop is live. Named distinctly from
+    /// `AnalyticsStore.isRefreshing`, which means something different (a
+    /// fetch is in flight, and it drives the panel spinner) and would
+    /// otherwise collide with this.
+    public var isRefreshLoopRunning: Bool { refreshTask != nil }
 
     /// The host calls this at startup with the stored state, and again on every
     /// toggle. Until this existed, a switched-off Analytics went on
@@ -84,11 +101,12 @@ public final class Analytics: PerchPlugin {
     /// nothing to tear down from a nonisolated `deinit`.
     private func startRefreshing() {
         refreshTask?.cancel()
+        let refreshInterval = refreshInterval
         refreshTask = Task { [weak self] in
             while !Task.isCancelled {
                 guard let store = self?.store else { return }
-                await store.refreshIfStale(maxAge: Self.refreshInterval)
-                try? await Task.sleep(for: .seconds(Self.refreshInterval))
+                await store.refreshIfStale(maxAge: refreshInterval)
+                try? await Task.sleep(for: .seconds(refreshInterval))
             }
         }
     }

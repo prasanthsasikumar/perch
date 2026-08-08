@@ -36,6 +36,11 @@ final class StubAnalyticsAPI: GoogleAnalyticsAPI, @unchecked Sendable {
     private var results: [String: Result<PropertyStats, AnalyticsError>]
     private var discovery: Result<[AnalyticsProperty], AnalyticsError>
     private var _callCount = 0
+    /// Awaited inside `stats(for:today:)` before it returns, so a test can
+    /// hold a call "in flight" and cancel the caller out from under it —
+    /// e.g. to prove cancellation is handled rather than mapped to a bogus
+    /// failure. `nil` (the default) means no artificial delay.
+    private var gate: (@Sendable () async throws -> Void)?
 
     init(
         clientEmail: String = "perch@example.iam.gserviceaccount.com",
@@ -53,7 +58,12 @@ final class StubAnalyticsAPI: GoogleAnalyticsAPI, @unchecked Sendable {
         lock.withLock { results[id] = result }
     }
 
+    func setGate(_ gate: (@Sendable () async throws -> Void)?) {
+        lock.withLock { self.gate = gate }
+    }
+
     func stats(for propertyID: String, today: Date) async throws -> PropertyStats {
+        if let gate = lock.withLock({ gate }) { try await gate() }
         let result: Result<PropertyStats, AnalyticsError>? = lock.withLock {
             _callCount += 1
             return results[propertyID]

@@ -139,6 +139,30 @@ final class AnalyticsStoreTests: XCTestCase {
         XCTAssertEqual(store.credentialFailure, .authenticationFailed("invalid_grant"))
     }
 
+    /// Toggling the plugin off mid-fetch cancels the refresh task while
+    /// `stats(for:today:)` is still in flight. Before the `Task.isCancelled`
+    /// guard in `refresh()`, that in-flight call's cancellation error was
+    /// mapped by the generic `catch` to `.malformedResponse` and recorded as
+    /// a real failure — a spurious "Couldn't refresh" that could persist
+    /// after re-enabling.
+    func testCancellingMidRefreshRecordsNoFailure() async throws {
+        let api = StubAnalyticsAPI(results: ["111": .success(Fixture.stats())])
+        api.setGate { try await Task.sleep(for: .seconds(5)) }
+        let store = makeStore(credentials: try configuredCredentials(), api: api)
+        store.setProperties([siteA])
+
+        let task = Task { await store.refresh() }
+        // Give the task group a real chance to reach the gate before
+        // cancelling — bounded at 50ms, far more than a synchronous dispatch
+        // needs.
+        try await Task.sleep(for: .milliseconds(50))
+        task.cancel()
+        _ = await task.value
+
+        XCTAssertTrue(store.failures.isEmpty)
+        XCTAssertNil(store.credentialFailure)
+    }
+
     func testRefreshDoesNothingWithoutACredential() async {
         let api = StubAnalyticsAPI(results: ["111": .success(Fixture.stats())])
         let store = makeStore(credentials: InMemoryCredentialStore(), api: api)

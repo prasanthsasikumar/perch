@@ -189,6 +189,19 @@ public final class AnalyticsStore {
             return collected
         }
 
+        // Toggling the plugin off mid-fetch cancels this task. Without this
+        // check, the in-flight `stats(for:today:)` calls throw a
+        // cancellation error, the generic `catch` above maps it to
+        // `.malformedResponse`, and `apply` records a spurious "Couldn't
+        // refresh" failure that can persist on re-enable even though nothing
+        // was actually wrong.
+        // Toggling the plugin off mid-fetch cancels this task. Without this
+        // check, the in-flight `stats(for:today:)` calls throw a
+        // cancellation error, the generic `catch` above maps it to
+        // `.malformedResponse`, and `apply` records a spurious "Couldn't
+        // refresh" failure that can persist on re-enable even though nothing
+        // was actually wrong.
+        guard !Task.isCancelled else { return }
         apply(results)
     }
 
