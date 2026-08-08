@@ -28,7 +28,6 @@ public final class Market: PerchPlugin {
         let store = MarketStore(storage: context.storage)
         self.store = store
         poller = WatchPoller(store: store, source: source)
-        poller.run()
     }
 
     public var panel: AnyView {
@@ -49,4 +48,15 @@ public final class Market: PerchPlugin {
     /// The store debounces its writes; this covers the window between a poll
     /// landing and the process dying.
     public func flush() { store.saveNow() }
+
+    /// The host calls this at startup with the stored state, and again on
+    /// every toggle. Polling Facebook is precisely the kind of work a user
+    /// expects to stop when they switch a plugin off.
+    public func setEnabled(_ isEnabled: Bool) {
+        if isEnabled {
+            poller.run()
+        } else {
+            poller.stop()
+        }
+    }
 }

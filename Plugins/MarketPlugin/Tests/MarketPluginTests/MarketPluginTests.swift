@@ -66,4 +66,39 @@ final class MarketPluginTests: XCTestCase {
             FileManager.default.fileExists(atPath: storage.url(named: "market.json").path)
         )
     }
+
+    func testThePollerDoesNotRunUntilTheHostEnablesIt() {
+        // A disabled plugin that started polling in init would fire one real
+        // search at every launch before the registry could stop it.
+        let plugin = makePlugin()
+
+        XCTAssertFalse(plugin.poller.isRunning)
+    }
+
+    func testEnablingStartsThePoller() {
+        let plugin = makePlugin()
+
+        plugin.setEnabled(true)
+
+        XCTAssertTrue(plugin.poller.isRunning)
+    }
+
+    func testDisablingStopsThePoller() {
+        let plugin = makePlugin()
+        plugin.setEnabled(true)
+
+        plugin.setEnabled(false)
+
+        XCTAssertFalse(plugin.poller.isRunning)
+    }
+
+    func testEnablingTwiceDoesNotLeaveTwoLoopsRunning() {
+        let plugin = makePlugin()
+
+        plugin.setEnabled(true)
+        plugin.setEnabled(true)
+        plugin.setEnabled(false)
+
+        XCTAssertFalse(plugin.poller.isRunning)
+    }
 }

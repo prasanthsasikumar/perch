@@ -164,6 +164,10 @@ public final class WatchPoller {
         loop = nil
     }
 
+    /// Whether the background loop is live. The host's enable/disable hook is
+    /// the only thing that should change this.
+    public var isRunning: Bool { loop != nil }
+
     // MARK: - Scheduling
 
     private func reschedule(

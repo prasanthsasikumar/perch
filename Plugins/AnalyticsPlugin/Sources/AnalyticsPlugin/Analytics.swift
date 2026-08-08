@@ -31,7 +31,6 @@ public final class Analytics: PerchPlugin {
                 account: "serviceAccount"
             )
         )
-        startRefreshing()
     }
 
     public var panel: AnyView {
@@ -64,12 +63,27 @@ public final class Analytics: PerchPlugin {
     /// between a refresh landing and the process dying.
     public func flush() { store.saveNow() }
 
+    /// Whether the background refresh loop is live.
+    public var isRefreshing: Bool { refreshTask != nil }
+
+    /// The host calls this at startup with the stored state, and again on every
+    /// toggle. Until this existed, a switched-off Analytics went on
+    /// authenticating to Google and fetching GA4 numbers every half hour.
+    public func setEnabled(_ isEnabled: Bool) {
+        if isEnabled {
+            startRefreshing()
+        } else {
+            stopRefreshing()
+        }
+    }
+
     /// Refreshes now and then every half hour.
     ///
     /// A `Task` loop rather than a `Timer`: the loop holds only a weak
     /// reference and returns as soon as the plugin is gone, so there is
     /// nothing to tear down from a nonisolated `deinit`.
     private func startRefreshing() {
+        refreshTask?.cancel()
         refreshTask = Task { [weak self] in
             while !Task.isCancelled {
                 guard let store = self?.store else { return }
@@ -77,5 +91,10 @@ public final class Analytics: PerchPlugin {
                 try? await Task.sleep(for: .seconds(Self.refreshInterval))
             }
         }
+    }
+
+    private func stopRefreshing() {
+        refreshTask?.cancel()
+        refreshTask = nil
     }
 }

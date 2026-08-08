@@ -43,4 +43,27 @@ final class AnalyticsPluginTests: XCTestCase {
     func testNoRefreshActionUntilConfigured() {
         XCTAssertTrue(makePlugin().footerActions.isEmpty)
     }
+
+    func testTheRefreshLoopDoesNotRunUntilTheHostEnablesIt() {
+        let plugin = makePlugin()
+
+        XCTAssertFalse(plugin.isRefreshing)
+    }
+
+    func testEnablingStartsTheRefreshLoop() {
+        let plugin = makePlugin()
+
+        plugin.setEnabled(true)
+
+        XCTAssertTrue(plugin.isRefreshing)
+    }
+
+    func testDisablingStopsTheRefreshLoop() {
+        let plugin = makePlugin()
+        plugin.setEnabled(true)
+
+        plugin.setEnabled(false)
+
+        XCTAssertFalse(plugin.isRefreshing)
+    }
 }
