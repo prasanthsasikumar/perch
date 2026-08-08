@@ -32,6 +32,7 @@ final class PluginRegistry {
     private var enabledIDs: Set<String> {
         didSet {
             persistEnabledIDs()
+            notifyEnabledChanges(from: oldValue)
             reconcileSelections()
         }
     }
@@ -86,6 +87,7 @@ final class PluginRegistry {
         // keep all three defaults keys populated after a fresh install.
         persistEnabledIDs()
         reconcileSelections()
+        notifyInitialEnabledState()
     }
 
     // MARK: - Derived state
@@ -130,6 +132,22 @@ final class PluginRegistry {
     /// tab is currently on screen.
     func flushAll() {
         for entry in entries { entry.plugin.flush() }
+    }
+
+    /// Tells each plugin whose state actually changed, and no others.
+    ///
+    /// Only the changed ones: re-notifying everything on every toggle would
+    /// require every `setEnabled` implementation to be idempotent for no gain.
+    private func notifyEnabledChanges(from oldValue: Set<String>) {
+        for entry in entries where enabledIDs.contains(entry.id) != oldValue.contains(entry.id) {
+            entry.plugin.setEnabled(enabledIDs.contains(entry.id))
+        }
+    }
+
+    /// Every plugin learns its stored state once, at startup, before it has a
+    /// chance to start any background work of its own.
+    private func notifyInitialEnabledState() {
+        for entry in entries { entry.plugin.setEnabled(enabledIDs.contains(entry.id)) }
     }
 
     private func persistEnabledIDs() {

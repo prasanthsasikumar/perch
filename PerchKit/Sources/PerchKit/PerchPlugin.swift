@@ -46,6 +46,21 @@ public protocol PerchPlugin: AnyObject, Observable {
     ///
     /// Default: no-op. A plugin that writes eagerly needs nothing here.
     func flush()
+
+    /// Told when the user enables or disables this plugin, and once at startup
+    /// with its stored state.
+    ///
+    /// A plugin that does background work — a timer, a refresh loop, a poller —
+    /// must stop it when this is `false`. Disabling hides a plugin's tab, but
+    /// hiding is not stopping: without this, a switched-off plugin keeps
+    /// talking to the network on a user who thought they had turned it off.
+    ///
+    /// Stored state is left alone. Disabling is not deleting, and re-enabling
+    /// should pick up where the plugin left off.
+    ///
+    /// Default: no-op. A plugin that only does work while its panel is on
+    /// screen needs nothing here.
+    func setEnabled(_ isEnabled: Bool)
 }
 
 public extension PerchPlugin {
@@ -54,6 +69,7 @@ public extension PerchPlugin {
     var footerActions: [PluginAction] { [] }
 
     func flush() {}
+    func setEnabled(_ isEnabled: Bool) {}
 
     // Instance mirrors of the statics, so the host can read metadata off an
     // `any PerchPlugin` without opening the existential.
