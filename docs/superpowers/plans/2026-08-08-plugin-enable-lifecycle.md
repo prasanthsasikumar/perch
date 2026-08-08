@@ -527,16 +527,22 @@ a double enable cannot leave two loops running. If it does not already, add
 Run: `xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=macOS' 2>&1 | tail -20`
 Expected: `** TEST SUCCEEDED **`, 174 tests, no regressions.
 
-- [ ] **Step 9: Verify in the running app**
+- [ ] **Step 9: Hand the app check to the user — do not automate it**
 
-Build and run Perch. Then:
+**Do not script the UI.** No accessibility scripting, no `cliclick`, no
+coordinate clicks. This runs on a real working desktop with the user's own
+windows open; a missed click has already landed on unrelated content once.
+Building and launching the app to confirm it starts is fine. Clicking through
+it is not your job.
+
+Report this as a check for the user to run themselves:
 
 1. Settings → Plugins. Switch **Analytics** off.
 2. Confirm its tab disappears from the panel.
 3. Switch it back on and confirm the tab returns and the plugin still works.
 4. Do the same for **Market**.
 
-You cannot see a background loop from the UI, so this step is checking that the
+The loop behaviour itself is covered by the tests above; this is only checking that the toggle still behaves and nothing crashes on the transition.
 toggle still behaves correctly and nothing crashes on the transition — the loop
 behaviour itself is covered by the tests above. Report what you observed.
 
