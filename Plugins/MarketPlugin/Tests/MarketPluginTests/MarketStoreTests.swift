@@ -186,6 +186,50 @@ final class MarketStoreTests: XCTestCase {
         XCTAssertTrue(store.watches.isEmpty)
     }
 
+    func testRecordIgnoresAWatchThatNoLongerExists() {
+        // Defense in depth: `WatchPoller` re-checks before calling `record`
+        // after an `await`, but the store must not depend on every caller
+        // remembering to do that — an orphaned entry in `listingsByWatch`
+        // outlives the watch in every save from here on.
+        let store = configuredStore()
+        let ghostID = UUID()
+
+        let fresh = store.record([scraped("a")], for: ghostID)
+
+        XCTAssertTrue(fresh.isEmpty)
+        XCTAssertTrue(store.listings(for: ghostID).isEmpty)
+    }
+
+    func testASaveFailureSetsTheNotice() throws {
+        // A plain file where `PluginStorage` expects a directory makes
+        // `createDirectory` throw — a full disk, a permissions problem, or
+        // a sandbox denial all fail the same way from the store's side.
+        let path = FileManager.default.temporaryDirectory
+            .appendingPathComponent("MarketTests-\(UUID().uuidString)")
+        try Data().write(to: path)
+        let store = MarketStore(storage: PluginStorage(directory: path))
+
+        store.saveNow()
+
+        XCTAssertNotNil(store.saveFailureNotice)
+        try? FileManager.default.removeItem(at: path)
+    }
+
+    func testASuccessfulSaveClearsAPriorFailureNotice() throws {
+        let path = FileManager.default.temporaryDirectory
+            .appendingPathComponent("MarketTests-\(UUID().uuidString)")
+        try Data().write(to: path)
+        let store = MarketStore(storage: PluginStorage(directory: path))
+        store.saveNow()
+        XCTAssertNotNil(store.saveFailureNotice)
+        try FileManager.default.removeItem(at: path)
+
+        store.saveNow()
+
+        XCTAssertNil(store.saveFailureNotice)
+        try? FileManager.default.removeItem(at: path)
+    }
+
     func testUpdatingAWatchReplacesItInPlace() {
         let store = configuredStore()
         var watch = store.addWatch(query: "GoPro", maxPrice: 200)!

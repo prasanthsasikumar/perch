@@ -19,6 +19,7 @@ public final class MarketStore {
     public private(set) var watches: [Watch] = []
     public private(set) var settings: MarketSettings = .defaults
     public private(set) var loadFailureNotice: String?
+    public private(set) var saveFailureNotice: String?
 
     private var listingsByWatch: [UUID: [Listing]] = [:]
     private let storage: PluginStorage
@@ -81,8 +82,16 @@ public final class MarketStore {
     // MARK: - Listings
 
     /// Records whatever is new for this watch and returns just those.
+    ///
+    /// No-ops for a watch that no longer exists. `WatchPoller` already
+    /// re-checks before calling this after an `await`, but a deleted watch
+    /// mid-poll is exactly the case a second, cheaper guard here is meant to
+    /// catch regardless of what the caller remembered to do — this is what
+    /// keeps a deleted watch from growing an orphaned entry in
+    /// `listingsByWatch` that outlives it in every save from here on.
     @discardableResult
     public func record(_ scraped: [ScrapedListing], for watchID: UUID) -> [Listing] {
+        guard watches.contains(where: { $0.id == watchID }) else { return [] }
         let existing = listingsByWatch[watchID] ?? []
         let seenIDs = Set(existing.map(\.id))
         let fresh = newListings(scraped, seenIDs: seenIDs).map {
@@ -162,6 +171,17 @@ public final class MarketStore {
             listings: listingsByWatch.values.flatMap { $0 },
             settings: settings
         )
-        try? storage.save(document, named: filename)
+        do {
+            try storage.save(document, named: filename)
+            saveFailureNotice = nil
+        } catch {
+            // A full disk, a permissions problem, or a sandbox denial must
+            // not lose every watch and listing in silence while the panel
+            // keeps showing them until relaunch. "Silence is not an
+            // acceptable output" is the spec's own standard, and it applies
+            // at least as much to the write that destroys data as it does
+            // to the read that already has `loadFailureNotice`.
+            saveFailureNotice = "Couldn't save your watches. Changes may be lost if Perch quits."
+        }
     }
 }
