@@ -56,11 +56,14 @@ public final class WatchPoller {
     public func tick() async -> [(UUID, Int)] {
         let now = clock()
         let due = store.watches.filter { !$0.paused && $0.nextCheckAt <= now }
-        // No `if state == .polling { state = .idle }` here: every exit below
-        // already leaves `state` at a terminal value (`.idle`, `.signedOut`,
-        // or `.backoff`) before `tick()` returns, and `run()`'s loop never
-        // overlaps two `tick()` calls — so `state` can never already be
-        // `.polling` when a fresh call starts.
+        // No `if state == .polling { state = .idle }` here: at the top of
+        // `tick()`, before the loop below has run at all, `state` can only
+        // be whatever the PREVIOUS `tick()` call left it at — and every
+        // `tick()` exit leaves it at a terminal value (`.idle`, `.signedOut`,
+        // or `.backoff`) before returning, with `run()`'s loop never
+        // overlapping two `tick()` calls. So `state` can never already be
+        // `.polling` right here. (It very much CAN be `.polling` further
+        // down, mid-loop — that path resets it explicitly below.)
         guard !due.isEmpty else { return [] }
 
         state = .polling
@@ -70,8 +73,14 @@ public final class WatchPoller {
             // `stop()` cancels the loop, but without this an in-flight
             // `tick()` still runs every remaining due watch — with a real
             // source and several watches, that leaves Perch loading pages
-            // for minutes after quit.
-            guard !Task.isCancelled else { return results }
+            // for minutes after quit. `state` was just set to `.polling`
+            // above (or left there by an earlier iteration), so this exit
+            // must reset it to `.idle` itself — nothing further down ever
+            // runs to do that for it.
+            guard !Task.isCancelled else {
+                state = .idle
+                return results
+            }
             do {
                 let scraped = try await source.search(
                     query: watch.query,

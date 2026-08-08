@@ -33,6 +33,10 @@ struct MarketPanelView: View {
                 TextField("Max $", text: $maxPrice)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 64)
+                    // Otherwise a rejected entry's caption outlives the
+                    // rejection — it would still be showing after the user
+                    // fixed the field but before submitting again.
+                    .onChange(of: maxPrice) { maxPriceError = nil }
             }
             .disabled(!store.canAddWatch)
             .onSubmit(addWatch)
@@ -152,11 +156,30 @@ enum MaxPriceInput: Equatable {
 /// point survives the strip and is read as dollars-and-cents, truncated to
 /// whole dollars — `"200.50"` becomes `200` rather than the digit-smash
 /// `20050` that dropping the `.` outright would produce.
+///
+/// Rejects, rather than silently coercing:
+/// - a `-` anywhere in the field. It is a sign, not a currency symbol —
+///   stripped like everything else that isn't a digit or `.`, `"-5"` would
+///   otherwise silently become a cap of `5`.
+/// - a value that truncates to zero or less (`"0"`, `"0.4"`). A watch with
+///   a cap of $0 can never match anything; that is a mistake worth
+///   rejecting, not a watch worth silently creating.
+/// - anything `Int` cannot hold exactly. `Int(_: Double)` *traps* on a value
+///   at or beyond `Int.max` (a 19-/20-digit entry is enough), and a trap
+///   here takes down every plugin in the host, not just Market — worse,
+///   it isn't a clean exit, so `MarketStore`'s debounced pending save and
+///   `Market.flush()` both never run. `Int(exactly:)` returns `nil` instead
+///   of trapping.
 func parseMaxPrice(_ raw: String) -> MaxPriceInput {
     let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty else { return .empty }
+    guard !trimmed.contains("-") else { return .invalid }
 
     let cleaned = trimmed.filter { $0.isNumber || $0 == "." }
     guard !cleaned.isEmpty, let dollars = Double(cleaned) else { return .invalid }
-    return .value(Int(dollars))
+    guard
+        let value = Int(exactly: dollars.rounded(.towardZero)),
+        value > 0
+    else { return .invalid }
+    return .value(value)
 }

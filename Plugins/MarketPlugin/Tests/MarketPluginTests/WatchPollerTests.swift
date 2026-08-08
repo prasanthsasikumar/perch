@@ -404,6 +404,12 @@ final class WatchPollerTests: XCTestCase {
         store.addWatch(query: "GoPro", maxPrice: nil)
         let source = FakeListingSource(results: [])
         let calledThreeTimes = expectation(description: "tick ran at least three times")
+        // `expectation(description:)` defaults `assertForOverFulfill` to
+        // `true`, and this fires once for every call once the count reaches
+        // 3 — a fourth tick landing before `poller.stop()` below would fail
+        // the test on an API violation rather than the thing actually being
+        // asserted. Only "at least three" is meant here.
+        calledThreeTimes.assertForOverFulfill = false
         source.onSearch = {
             if source.calls.count >= 3 { calledThreeTimes.fulfill() }
         }
