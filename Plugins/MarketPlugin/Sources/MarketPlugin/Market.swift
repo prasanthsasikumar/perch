@@ -18,12 +18,18 @@ public final class Market: PerchPlugin {
     public let store: MarketStore
     public let poller: WatchPoller
 
+    /// Non-nil only on the production path. Tests inject a fake source and get
+    /// no webview.
+    public private(set) var session: FacebookSession?
+
     public required convenience init(context: PluginContext) {
-        self.init(context: context, source: StubListingSource())
+        let session = FacebookSession()
+        self.init(context: context, source: FacebookListingSource(session: session))
+        self.session = session
     }
 
-    /// The testable initializer. Plan 2 passes the real WKWebView-backed
-    /// source here; tests pass a fake.
+    /// The testable initializer. The production path above passes the real
+    /// WKWebView-backed source; tests pass a fake.
     public init(context: PluginContext, source: ListingSource) {
         let store = MarketStore(storage: context.storage)
         self.store = store

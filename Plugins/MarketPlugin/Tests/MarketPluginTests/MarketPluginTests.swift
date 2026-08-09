@@ -14,7 +14,7 @@ final class MarketPluginTests: XCTestCase {
                     prefix: Market.identifier
                 )
             ),
-            source: StubListingSource()
+            source: FakeListingSource()
         )
     }
 
@@ -55,7 +55,7 @@ final class MarketPluginTests: XCTestCase {
                     prefix: Market.identifier
                 )
             ),
-            source: StubListingSource()
+            source: FakeListingSource()
         )
         plugin.store.updateSettings(MarketSettings(location: "auckland"))
         plugin.store.addWatch(query: "GoPro", maxPrice: nil)
