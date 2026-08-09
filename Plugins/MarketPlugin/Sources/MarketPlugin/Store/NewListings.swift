@@ -8,6 +8,9 @@ public struct ScrapedListing: Equatable, Sendable {
     public let location: String
     public let url: URL
     public let imageURL: URL?
+    /// The numeric price, when the display string contained one. `nil` for
+    /// "Free" and anything else unparseable.
+    public let priceValue: Int?
 
     public init(
         id: String,
@@ -15,7 +18,8 @@ public struct ScrapedListing: Equatable, Sendable {
         price: String,
         location: String,
         url: URL,
-        imageURL: URL?
+        imageURL: URL?,
+        priceValue: Int? = nil
     ) {
         self.id = id
         self.title = title
@@ -23,6 +27,7 @@ public struct ScrapedListing: Equatable, Sendable {
         self.location = location
         self.url = url
         self.imageURL = imageURL
+        self.priceValue = priceValue
     }
 }
 
