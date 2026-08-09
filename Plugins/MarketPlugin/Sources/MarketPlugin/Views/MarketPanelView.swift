@@ -4,6 +4,9 @@ import SwiftUI
 struct MarketPanelView: View {
     let store: MarketStore
     let poller: WatchPoller
+    /// Opens the sign-in window. Absent when the plugin was built with an
+    /// injected source, which has no webview to show.
+    let onSignIn: (() -> Void)?
 
     @State private var query = ""
     @State private var maxPrice = ""
@@ -86,15 +89,30 @@ struct MarketPanelView: View {
     private var statusLine: some View {
         switch poller.state {
         case .signedOut:
-            Label("Sign in to Facebook", systemImage: "exclamationmark.triangle")
-                .font(.caption)
-                .foregroundStyle(.orange)
+            Button {
+                onSignIn?()
+            } label: {
+                Label("Sign in to Facebook", systemImage: "exclamationmark.triangle")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
+            .buttonStyle(.plain)
+            .help("Opens a window where you can sign in to Facebook")
         case .backoff:
             Text(poller.lastError.map { "Retrying — \($0)" } ?? "Retrying")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         case .idle, .polling:
-            EmptyView()
+            // Round after round of every watch scraping nothing is the one
+            // signal that separates "nothing matched" from "the parser stopped
+            // working" — worth saying rather than showing quiet emptiness.
+            if poller.isScrapingHealthy {
+                EmptyView()
+            } else {
+                Text("Facebook may have changed — check your sign-in")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
         }
     }
 

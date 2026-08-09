@@ -37,7 +37,13 @@ public final class Market: PerchPlugin {
     }
 
     public var panel: AnyView {
-        AnyView(MarketPanelView(store: store, poller: poller))
+        AnyView(
+            MarketPanelView(
+                store: store,
+                poller: poller,
+                onSignIn: session.map { session in { session.presentForSignIn() } }
+            )
+        )
     }
 
     public var settings: AnyView {

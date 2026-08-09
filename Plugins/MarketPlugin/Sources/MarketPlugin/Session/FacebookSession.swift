@@ -95,6 +95,37 @@ public final class FacebookSession: NSObject {
         return listings
     }
 
+    // MARK: - Sign-in
+
+    /// Whether the sign-in window is on screen.
+    public private(set) var isShowingSignIn = false
+
+    /// Brings the webview on screen so the user can sign in to Facebook.
+    ///
+    /// The *same* webview the scraper uses — a second one would put the cookie
+    /// in the wrong data store. Nothing times the user out and nothing closes
+    /// the window underneath them; the Python version gave them 60 seconds and
+    /// then tore the window down mid-2FA, which is the failure this exists to
+    /// avoid.
+    public func presentForSignIn() {
+        webView.load(URLRequest(url: URL(string: "https://www.facebook.com/login")!))
+        hiddenWindow.setContentSize(NSSize(width: 1024, height: 800))
+        hiddenWindow.center()
+        hiddenWindow.title = "Sign in to Facebook"
+        hiddenWindow.makeKeyAndOrderFront(nil)
+        // Perch is LSUIElement, so this is what actually brings the window
+        // forward; without it it opens behind whatever the user is using.
+        NSApp.activate(ignoringOtherApps: true)
+        isShowingSignIn = true
+    }
+
+    /// Returns the webview to its offscreen parking spot.
+    public func dismissSignIn() {
+        hiddenWindow.orderOut(nil)
+        hiddenWindow.setFrameOrigin(NSPoint(x: -10_000, y: -10_000))
+        isShowingSignIn = false
+    }
+
     // MARK: - Navigation
 
     private func navigate(to url: URL) async throws {
@@ -154,6 +185,15 @@ public final class FacebookSession: NSObject {
 
 extension FacebookSession: WKNavigationDelegate {
     public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        // Signed in and back on a real Facebook page: the window has done its
+        // job. Judged by URL rather than by a button click, because Facebook's
+        // login flow has several steps and only the destination is stable.
+        if isShowingSignIn,
+           let path = webView.url?.path,
+           !path.contains("/login"),
+           !path.contains("/checkpoint") {
+            dismissSignIn()
+        }
         finishLoad(throwing: nil)
     }
 
