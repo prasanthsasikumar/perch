@@ -11,7 +11,11 @@ let package = Package(
         .package(path: "../../PerchKit")
     ],
     targets: [
-        .target(name: "MarketPlugin", dependencies: ["PerchKit"]),
+        .target(
+            name: "MarketPlugin",
+            dependencies: ["PerchKit"],
+            resources: [.process("Session/Resources")]
+        ),
         // PerchKit is listed explicitly even though MarketPlugin already
         // depends on it: later tests construct a PluginContext and a
         // PluginStorage directly, and relying on a transitive import is

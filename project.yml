@@ -83,7 +83,12 @@ targets:
   PerchTests:
     type: bundle.unit-test
     platform: macOS
-    sources: [PerchTests]
+    sources:
+      - PerchTests
+      # The .html fixtures need to reach the test bundle; the plain directory
+      # entry above picks up sources, not resources.
+      - path: PerchTests/Plugins/Market/Fixtures
+        buildPhase: resources
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
