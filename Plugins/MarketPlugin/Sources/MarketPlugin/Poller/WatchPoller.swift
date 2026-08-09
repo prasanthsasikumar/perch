@@ -19,9 +19,27 @@ public final class WatchPoller {
     public static let minIntervalSeconds: TimeInterval = 600
     public static let maxBackoffSeconds: TimeInterval = 7200
     public static let signInRetrySeconds: TimeInterval = 60
+    /// Consecutive polling rounds that scraped nothing at all before we stop
+    /// believing the scraper works. Three is roughly 45 minutes at the default
+    /// interval — late enough to be sure, early enough to be useful.
+    public static let emptyRunThreshold = 3
 
     public private(set) var state: PollerState = .idle
     public private(set) var lastError: String?
+
+    /// False once several consecutive rounds have scraped nothing whatsoever.
+    ///
+    /// A quiet search is normal; every watch returning zero listings, round
+    /// after round, usually means the selectors broke or the session died in a
+    /// way login detection missed. The panel says so rather than showing
+    /// nothing and letting the user assume it is working.
+    public var isScrapingHealthy: Bool { consecutiveEmptyRuns < Self.emptyRunThreshold }
+
+    /// Deliberately *not* `@ObservationIgnored`: the panel renders
+    /// `isScrapingHealthy`, so the counter behind it has to be observed or the
+    /// warning row would never appear until some other change redrew the view.
+    private var consecutiveEmptyRuns = 0
+    @ObservationIgnored private var isTicking = false
 
     private let store: MarketStore
     private let source: ListingSource
@@ -54,6 +72,14 @@ public final class WatchPoller {
     /// something new.
     @discardableResult
     public func tick() async -> [(UUID, Int)] {
+        // Sign-in, the background loop, and any future "poll now" can all
+        // reach here. `tick()` was written assuming it never runs concurrently
+        // with itself; two overlapping runs would double-poll and interleave
+        // store writes.
+        guard !isTicking else { return [] }
+        isTicking = true
+        defer { isTicking = false }
+
         let now = clock()
         let due = store.watches.filter { !$0.paused && $0.nextCheckAt <= now }
         // No `if state == .polling { state = .idle }` here: at the top of
@@ -68,6 +94,11 @@ public final class WatchPoller {
 
         state = .polling
         var results: [(UUID, Int)] = []
+        // Health is about scraping, not about finding: a round counts as
+        // evidence only if it actually reached the source, and counts as empty
+        // only if every watch it reached came back with nothing at all.
+        var scrapedAnything = false
+        var polledAnything = false
 
         for (position, watch) in due.enumerated() {
             // `stop()` cancels the loop, but without this an in-flight
@@ -88,6 +119,8 @@ public final class WatchPoller {
                     location: watch.location,
                     radiusKm: watch.radiusKm
                 )
+                polledAnything = true
+                if !scraped.isEmpty { scrapedAnything = true }
                 // The MainActor served other work during that `await` — a
                 // watch paused, edited, or deleted while its own search was
                 // in flight must not have that change silently reverted by
@@ -136,6 +169,13 @@ public final class WatchPoller {
         if state == .polling {
             state = .idle
             lastError = nil
+        }
+        // Only a round that actually polled something is evidence either way.
+        // The `signedOut` path returns above without reaching here on purpose:
+        // that state has its own message, and counting it here would show the
+        // user two different explanations for one problem.
+        if polledAnything {
+            consecutiveEmptyRuns = scrapedAnything ? 0 : consecutiveEmptyRuns + 1
         }
         return results
     }

@@ -43,6 +43,9 @@ final class FakeListingSource: ListingSource {
     /// simulate the MainActor servicing other work during the `await`, e.g.
     /// a watch being paused, edited, or deleted mid-poll.
     var onSearch: (() -> Void)?
+    /// Called inside `search`, before it returns. Lets a test suspend a poll
+    /// in flight.
+    var beforeReturning: (() async -> Void)?
     private(set) var calls: [Call] = []
 
     init(results: [ScrapedListing] = []) {
@@ -54,11 +57,29 @@ final class FakeListingSource: ListingSource {
     ) async throws -> [ScrapedListing] {
         calls.append(Call(query: query, maxPrice: maxPrice, location: location, radiusKm: radiusKm))
         onSearch?()
+        if let beforeReturning { await beforeReturning() }
         if let error {
             if failFirstCallOnly { self.error = nil }
             throw error
         }
         return results
+    }
+}
+
+/// Lets a test hold a fake's `search` open until it chooses to release it.
+actor AsyncGate {
+    private var continuation: CheckedContinuation<Void, Never>?
+    private var opened = false
+
+    func wait() async {
+        if opened { return }
+        await withCheckedContinuation { continuation = $0 }
+    }
+
+    func open() {
+        opened = true
+        continuation?.resume()
+        continuation = nil
     }
 }
 

@@ -485,4 +485,122 @@ final class WatchPollerTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(countAtStop, 3)
         XCTAssertEqual(source.calls.count, countAtStop)
     }
+
+    func testASecondTickIsRefusedWhileTheFirstIsStillRunning() async {
+        // Sign-in and the background loop can now overlap. Two ticks
+        // interleaving would double-poll and interleave store writes.
+        let store = makeStore()
+        let market = FakeListingSource()
+        store.addWatch(query: "GoPro", maxPrice: nil)
+        let poller = makePoller(store: store, source: market)
+
+        let gate = AsyncGate()
+        market.beforeReturning = { await gate.wait() }
+
+        async let first = poller.tick()
+        await Task.yield()
+        let second = await poller.tick()
+        await gate.open()
+        _ = await first
+
+        XCTAssertTrue(second.isEmpty)
+        XCTAssertEqual(market.calls.count, 1)
+    }
+
+    func testScrapingIsHealthyBeforeAnyPoll() {
+        let poller = makePoller(store: makeStore(), source: FakeListingSource())
+
+        XCTAssertTrue(poller.isScrapingHealthy)
+    }
+
+    func testConsecutiveEmptyRunsEventuallyReportUnhealthy() async {
+        let store = makeStore()
+        let market = FakeListingSource()  // returns nothing
+        store.addWatch(query: "GoPro", maxPrice: nil)
+        let poller = makePoller(store: store, source: market)
+
+        for _ in 0..<WatchPoller.emptyRunThreshold {
+            _ = await poller.tick()
+            clock.advance(WatchPoller.minIntervalSeconds * 2)
+        }
+
+        XCTAssertFalse(poller.isScrapingHealthy)
+    }
+
+    func testOneShortOfTheThresholdIsStillHealthy() async {
+        let store = makeStore()
+        let market = FakeListingSource()
+        store.addWatch(query: "GoPro", maxPrice: nil)
+        let poller = makePoller(store: store, source: market)
+
+        for _ in 0..<(WatchPoller.emptyRunThreshold - 1) {
+            _ = await poller.tick()
+            clock.advance(WatchPoller.minIntervalSeconds * 2)
+        }
+
+        XCTAssertTrue(poller.isScrapingHealthy)
+    }
+
+    func testAnyScrapedListingRestoresHealth() async {
+        // Counts listings SCRAPED, not listings that were new — a watch that
+        // keeps returning the same ten results is working fine.
+        let store = makeStore()
+        let market = FakeListingSource()
+        store.addWatch(query: "GoPro", maxPrice: nil)
+        let poller = makePoller(store: store, source: market)
+        for _ in 0..<WatchPoller.emptyRunThreshold {
+            _ = await poller.tick()
+            clock.advance(WatchPoller.minIntervalSeconds * 2)
+        }
+
+        market.results = [scraped("a")]
+        _ = await poller.tick()
+
+        XCTAssertTrue(poller.isScrapingHealthy)
+    }
+
+    func testTheSameListingsAgainStillCountAsHealthy() async {
+        let store = makeStore()
+        let market = FakeListingSource(results: [scraped("a")])
+        store.addWatch(query: "GoPro", maxPrice: nil)
+        let poller = makePoller(store: store, source: market)
+
+        for _ in 0..<(WatchPoller.emptyRunThreshold + 2) {
+            _ = await poller.tick()  // nothing NEW after the first
+            clock.advance(WatchPoller.minIntervalSeconds * 2)
+        }
+
+        XCTAssertTrue(poller.isScrapingHealthy)
+    }
+
+    func testATickThatPollsNothingDoesNotCountAsEmpty() async {
+        // No watches due is not evidence that scraping is broken.
+        let store = makeStore()
+        let market = FakeListingSource()
+        store.addWatch(query: "GoPro", maxPrice: nil)
+        let poller = makePoller(store: store, source: market)
+        _ = await poller.tick()  // one real empty run
+
+        for _ in 0..<10 {
+            _ = await poller.tick()  // nothing due; must not accumulate
+        }
+
+        XCTAssertTrue(poller.isScrapingHealthy)
+    }
+
+    func testBeingSignedOutDoesNotCountAsAnEmptyRun() async {
+        // Signed out has its own state and its own message.
+        let store = makeStore()
+        let market = FakeListingSource()
+        market.error = .signedOut
+        store.addWatch(query: "GoPro", maxPrice: nil)
+        let poller = makePoller(store: store, source: market)
+
+        for _ in 0..<(WatchPoller.emptyRunThreshold + 2) {
+            _ = await poller.tick()
+            clock.advance(WatchPoller.signInRetrySeconds * 2)
+        }
+
+        XCTAssertTrue(poller.isScrapingHealthy)
+    }
 }
