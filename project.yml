@@ -41,11 +41,33 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.ahlab.Perch
         CODE_SIGN_ENTITLEMENTS: Perch/Perch.entitlements
-        CODE_SIGN_IDENTITY: "-"
-        ENABLE_HARDENED_RUNTIME: YES
         MARKETING_VERSION: "2.1"
         CURRENT_PROJECT_VERSION: "3"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+      configs:
+        # Debug is signed with a real Development identity rather than ad hoc,
+        # because an ad-hoc signature changes on every build — and the Keychain
+        # trusts the exact binary that created an item, so Analytics' key
+        # re-prompted after every rebuild. A stable identity makes "Always
+        # Allow" stick.
+        #
+        # Hardened runtime is off here on purpose: XCTest injects a dylib into
+        # the host app, which hardened runtime blocks. Xcode used to disable it
+        # silently for ad-hoc signing; with a real identity it would not, and
+        # the test suite would stop running.
+        Debug:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: "Apple Development: Prasanth Sasikumar (5AD8QG2238)"
+          DEVELOPMENT_TEAM: 3U4384584Z
+          PROVISIONING_PROFILE_SPECIFIER: ""
+          ENABLE_HARDENED_RUNTIME: NO
+        # Release is what ships: Developer ID, hardened runtime on, ready to
+        # notarize.
+        Release:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: "Developer ID Application: FLOWXR PTE. LTD. (3U4384584Z)"
+          DEVELOPMENT_TEAM: 3U4384584Z
+          ENABLE_HARDENED_RUNTIME: YES
     info:
       path: Perch/Info.plist
       properties:
@@ -65,6 +87,14 @@ targets:
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
+      configs:
+        # The test bundle is injected into the host, so it has to be signed by
+        # the same team the host is.
+        Debug:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: "Apple Development: Prasanth Sasikumar (5AD8QG2238)"
+          DEVELOPMENT_TEAM: 3U4384584Z
+          PROVISIONING_PROFILE_SPECIFIER: ""
     dependencies:
       - target: Perch
       - package: PerchKit
