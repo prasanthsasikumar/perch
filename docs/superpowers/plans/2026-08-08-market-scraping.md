@@ -87,7 +87,9 @@ final class PriceParsingTests: XCTestCase {
     }
 
     func testAnAbsurdlyLargeNumberHasNoValue() {
-        // Must not trap. Int(exactly:) rather than Int(_:) on a Double.
+        // Must not trap. Int(String) returns nil on overflow, where
+        // Int(Double) would trap — which is exactly how an earlier version
+        // of the panel's price field crashed the whole app.
         XCTAssertNil(parsePriceValue("$99999999999999999999"))
     }
 }
@@ -1576,7 +1578,7 @@ In `Market.swift`, hand the panel a way to open sign-in:
 
 Run: `swift test --package-path Plugins/MarketPlugin` then
 `xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=macOS' 2>&1 | tail -20`
-Expected: both suites green. Exact counts shift as tests move between suites — do not treat a specific number as the gate; a failure is the gate.. No new tests here —
+Expected: both suites green. Exact counts shift as tests move between suites — do not treat a specific number as the gate; a failure is the gate. No new tests here —
 window presentation is not unit-testable in this setup, and a test asserting a
 window exists would prove nothing about whether signing in works.
 
