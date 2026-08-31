@@ -72,6 +72,11 @@ targets:
           CODE_SIGN_IDENTITY: "Developer ID Application: FLOWXR PTE. LTD. (3U4384584Z)"
           DEVELOPMENT_TEAM: 3U4384584Z
           ENABLE_HARDENED_RUNTIME: YES
+          # Notarization rejects a plain `xcodebuild build` twice over: Xcode
+          # injects the debug get-task-allow entitlement, and signs without a
+          # secure timestamp. Both are what `archive` would do on its own.
+          CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+          OTHER_CODE_SIGN_FLAGS: "--timestamp"
     info:
       path: Perch/Info.plist
       properties:
