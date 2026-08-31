@@ -2,8 +2,8 @@
 
 Small tools that live in your macOS menu bar.
 
-Perch is a host. The tools themselves are plugins: today there's **Tasks**, the
-todo list Perch grew out of; **Analytics**, which puts your Google Analytics
+Perch is a host. The tools themselves are plugins: today there's **Tasks**, a
+todo list with the current task in the menu bar; **Analytics**, which puts your Google Analytics
 numbers a click away; **Market**, which watches Facebook Marketplace searches;
 and **Busy**, which shows how busy a place is right now. More can be added
 without disturbing what's already there.
@@ -45,23 +45,6 @@ try again:
 ```bash
 xattr -dr com.apple.quarantine /Applications/Perch.app
 ```
-
-## Coming from MenuDo
-
-Perch is MenuDo renamed and rebuilt as a plugin host. It starts with an empty
-list — macOS gives each app its own sandbox, and Perch's is a different one, so
-tasks from a MenuDo install do not carry over.
-
-If you want them, copy the old file across by hand before first launch:
-
-```
-from: ~/Library/Containers/org.ahlab.MenuDo/Data/Library/Application Support/MenuDo/tasks.json
-to:   ~/Library/Containers/org.ahlab.Perch/Data/Library/Application Support/Perch/Plugins/org.ahlab.perch.menudo/tasks.json
-```
-
-Also **move `MenuDo.app` to the Trash**. Perch can't unregister MenuDo's
-launch-at-login entry, so until the old app is deleted both will start when you
-log in.
 
 ## Plugins
 
@@ -216,7 +199,7 @@ xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=ma
 
 ```
 PerchKit/                The public plugin API. Knows nothing about the host.
-Plugins/MenuDoPlugin/    The Tasks plugin: model, store, views
+Plugins/MenuDoPlugin/    The Tasks plugin (its original name): model, store, views
 Plugins/AnalyticsPlugin/ The Analytics plugin: GA4 client, auth, store, views
 Plugins/MarketPlugin/    The Market plugin: Marketplace scraping, poller, store, views
 Plugins/BusyPlugin/      The Busy plugin: Google popular-times scraping, store, views
