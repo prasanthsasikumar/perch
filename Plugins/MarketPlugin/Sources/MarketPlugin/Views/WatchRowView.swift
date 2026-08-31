@@ -3,12 +3,22 @@ import SwiftUI
 struct WatchRowView: View {
     let watch: Watch
     let unseenCount: Int
-    let newest: [Listing]
+    let listings: [Listing]
     let isExpanded: Bool
     let onToggle: () -> Void
     let onDelete: () -> Void
 
+    /// How many listings an expanded watch shows before it asks. Enough to
+    /// see what turned up today; few enough that three watches fit on
+    /// screen. "Show all" lifts it for that watch until the panel closes.
+    static let collapsedLimit = 5
+
     @State private var hovering = false
+    @State private var showingAll = false
+
+    private var shown: [Listing] {
+        showingAll ? listings : Array(listings.prefix(Self.collapsedLimit))
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -49,16 +59,16 @@ struct WatchRowView: View {
             .accessibilityAction(named: "Delete", onDelete)
 
             if isExpanded {
-                if newest.isEmpty {
+                if listings.isEmpty {
                     Text(emptyMessage)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
-                    ForEach(newest) { listing in
+                    ForEach(shown) { listing in
                         Link(destination: listing.url) {
                             HStack(spacing: 4) {
                                 Text(listing.price)
-                                Text(listing.title).lineLimit(1)
+                                Text(Self.displayTitle(listing)).lineLimit(1)
                                 Spacer()
                                 Text(RelativeTime.describe(listing.firstSeenAt))
                                     .foregroundStyle(.secondary)
@@ -66,6 +76,13 @@ struct WatchRowView: View {
                             .font(.caption)
                         }
                         .buttonStyle(.plain)
+                    }
+                    if listings.count > Self.collapsedLimit {
+                        Button(showingAll ? "Show fewer" : "Show all \(listings.count)") {
+                            showingAll.toggle()
+                        }
+                        .font(.caption)
+                        .buttonStyle(.link)
                     }
                 }
             } else if let checked = watch.lastCheckedAt {
@@ -75,6 +92,13 @@ struct WatchRowView: View {
             }
         }
         .padding(.vertical, 4)
+    }
+
+    /// Facebook lets a listing go out with no title. Its location is the
+    /// next most useful thing, but it must read as a stand-in, not a title.
+    static func displayTitle(_ listing: Listing) -> String {
+        if !listing.title.isEmpty { return listing.title }
+        return listing.location.isEmpty ? "Untitled listing" : "Untitled listing in \(listing.location)"
     }
 
     /// Never a blank space: an empty watch says since when it has been empty.

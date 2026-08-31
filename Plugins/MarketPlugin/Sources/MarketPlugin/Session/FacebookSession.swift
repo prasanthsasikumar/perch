@@ -76,6 +76,7 @@ public final class FacebookSession: NSObject {
     /// `SearchError.failed` when navigation fails or times out.
     public func loadResults(url: URL) async throws -> [ScrapedListing] {
         try await navigate(to: url)
+        await dumpPageIfAsked()
 
         let script = try extractScriptSource()
         let raw = try await evaluate(script)
@@ -177,6 +178,26 @@ public final class FacebookSession: NSObject {
         } catch {
             throw SearchError.failed("could not read the page")
         }
+    }
+
+    /// Writes the rendered page to `$PERCH_MARKET_DUMP_DIR/<timestamp>.html`
+    /// when that variable is set (`launchctl setenv` reaches an app started
+    /// from Finder or `open`). Facebook's markup is the one input this
+    /// plugin cannot ship a fixture for without a signed-in session, so
+    /// when the selectors break this is how the next fixture gets made.
+    private func dumpPageIfAsked() async {
+        guard let directory = ProcessInfo.processInfo.environment["PERCH_MARKET_DUMP_DIR"],
+              !directory.isEmpty,
+              let html = (try? await webView.evaluateJavaScript(
+                  "document.documentElement.outerHTML"
+              )) as? String
+        else { return }
+        let name = ISO8601DateFormatter().string(from: .now) + ".html"
+        try? html.write(
+            to: URL(fileURLWithPath: directory).appendingPathComponent(name),
+            atomically: true,
+            encoding: .utf8
+        )
     }
 
     private func evaluateBool(_ script: String) async -> Bool {

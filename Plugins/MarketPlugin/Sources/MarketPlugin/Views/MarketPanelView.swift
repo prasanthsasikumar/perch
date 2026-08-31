@@ -72,7 +72,7 @@ struct MarketPanelView: View {
                     WatchRowView(
                         watch: watch,
                         unseenCount: store.unseenCount(for: watch.id),
-                        newest: store.newest(for: watch.id, limit: 3),
+                        listings: store.listings(for: watch.id),
                         isExpanded: expanded.contains(watch.id),
                         onToggle: { toggle(watch) },
                         onDelete: { store.deleteWatch(id: watch.id) }

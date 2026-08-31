@@ -79,6 +79,41 @@ final class ExtractScriptTests: XCTestCase {
         XCTAssertFalse(listings.contains { $0.title == "Electronics" })
     }
 
+    // MARK: - Facebook's 2026-08 card markup
+
+    func testItReadsTheRowsOfACurrentCard() async throws {
+        let listings = try await extract(from: "marketplace-mixed")
+        let bike = try XCTUnwrap(listings.first { $0.id == "5001" })
+
+        XCTAssertEqual(bike.title, "Interceptor 650")
+        XCTAssertEqual(bike.price, "₹276,000")
+        XCTAssertEqual(bike.priceValue, 276_000)
+        XCTAssertEqual(bike.location, "Kochi, KL")
+        XCTAssertEqual(bike.imageURL?.absoluteString, "https://img.example/5001.jpg")
+    }
+
+    func testAnUntitledCardKeepsItsLocationOutOfTheTitle() async throws {
+        let listings = try await extract(from: "marketplace-mixed")
+        let untitled = try XCTUnwrap(listings.first { $0.id == "5002" })
+
+        XCTAssertEqual(untitled.title, "")
+        XCTAssertEqual(untitled.location, "Palakkad, KL")
+        // The struck-through earlier price is not the price.
+        XCTAssertEqual(untitled.price, "₹250,000")
+    }
+
+    func testListingsAfterTheOutsideYourSearchLineAreNotResults() async throws {
+        let listings = try await extract(from: "marketplace-mixed")
+
+        XCTAssertEqual(listings.map(\.id), ["5001", "5002"])
+    }
+
+    func testANoResultsPageYieldsNothingDespiteThePadding() async throws {
+        let listings = try await extract(from: "marketplace-outside")
+
+        XCTAssertTrue(listings.isEmpty)
+    }
+
     func testAnEmptyResultsPageYieldsNothing() async throws {
         // Bound to a local first: XCTAssert takes an autoclosure, which
         // cannot contain an `await`.

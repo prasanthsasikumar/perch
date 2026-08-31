@@ -1,0 +1,50 @@
+<!doctype html>
+<html><body>
+  <!--
+    A search with two real matches, followed by Facebook's padding. Card
+    markup is the structure Facebook served on 2026-08-31 (class attributes
+    stripped): price in the first span[dir=auto], then title and location in
+    two span[aria-hidden=true] rows. The second real card has no title and a
+    struck-through earlier price; the third real card is the one whose id
+    repeats further down, as Facebook does when you scroll.
+  -->
+  <div>
+    <div><span dir="auto"><div><span>Showing results for <span>interceptor 650</span>.</span></div></span></div>
+  </div>
+  <div>
+    <a aria-label="Interceptor 650, ₹276,000, Kochi, KL, listing 5001" href="/marketplace/item/5001/?ref=search" rel="nofollow noopener noreferrer">
+      <div><div><div><div><div><div><div><img alt="Interceptor 650 in Kochi, KL" src="https://img.example/5001.jpg"></div></div></div></div></div></div>
+      <div>
+        <div><span><div><span dir="auto">₹276,000</span></div></span></div>
+        <div><span aria-hidden="true"><div><span dir="auto">Interceptor 650</span></div></span></div>
+        <div><span aria-hidden="true"><div><span dir="auto"><span>Kochi, KL</span></span></div></span></div>
+      </div></div>
+    </a>
+    <a aria-label=", ₹250,000, Palakkad, KL, listing 5002" href="/marketplace/item/5002/?ref=search" rel="nofollow noopener noreferrer">
+      <div><div><div><div><div><div><div><img alt=" in Palakkad, KL" src="https://img.example/5002.jpg"></div></div></div></div></div></div>
+      <div>
+        <div><span><div><span dir="auto">₹250,000</span><span dir="auto"><s>₹270,000</s></span></div></span></div>
+        <div><span aria-hidden="true"></span></div>
+        <div><span aria-hidden="true"><div><span dir="auto"><span>Palakkad, KL</span></span></div></span></div>
+      </div></div>
+    </a>
+  </div>
+  <div><span dir="auto">Results from outside your search</span></div>
+  <div>
+    <a aria-label="BMW G310RR, ₹274,999, Ernakulam, KL, listing 5003" href="/marketplace/item/5003/?ref=search" rel="nofollow noopener noreferrer">
+      <div><div><div><div><div><div><div><img alt="BMW G310RR in Ernakulam, KL" src="https://img.example/5003.jpg"></div></div></div></div></div></div>
+      <div>
+        <div><span><div><span dir="auto">₹274,999</span></div></span></div>
+        <div><span aria-hidden="true"><div><span dir="auto">BMW G310RR</span></div></span></div>
+        <div><span aria-hidden="true"><div><span dir="auto"><span>Ernakulam, KL</span></span></div></span></div>
+      </div></div>
+    </a>
+    <a aria-label="Interceptor 650, ₹276,000, Kochi, KL, listing 5001" href="/marketplace/item/5001/?ref=scroll" rel="nofollow noopener noreferrer">
+      <div>
+        <div><span><div><span dir="auto">₹276,000</span></div></span></div>
+        <div><span aria-hidden="true"><div><span dir="auto">Interceptor 650</span></div></span></div>
+        <div><span aria-hidden="true"><div><span dir="auto"><span>Kochi, KL</span></span></div></span></div>
+      </div>
+    </a>
+  </div>
+</body></html>
