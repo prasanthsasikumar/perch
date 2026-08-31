@@ -12,7 +12,12 @@ struct AnalyticsPanelView: View {
     private static let openRefreshAge: TimeInterval = 60
 
     @State private var expanded: Set<String> = []
+    @State private var contentHeight: CGFloat = 0
     @Environment(\.openSettings) private var openSettings
+
+    /// Tallest the card list may get before it scrolls instead of pushing the
+    /// dropdown off the bottom of the screen.
+    private static let maxListHeight: CGFloat = 560
 
     var body: some View {
         Group {
@@ -52,10 +57,16 @@ struct AnalyticsPanelView: View {
                     }
                 }
                 .padding(.horizontal, 12)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
+                    contentHeight = $0
+                }
             }
-            // Two cards fit; beyond that it scrolls rather than growing the
-            // dropdown past the point of being a dropdown.
-            .frame(maxHeight: 380)
+            // The menu-bar window sizes itself to this view's ideal height, and
+            // a ScrollView's ideal height is not its content's — so without an
+            // explicit height the dropdown comes up short and everything
+            // scrolls. Track the real content height and claim exactly that,
+            // up to a cap that keeps the dropdown on screen.
+            .frame(height: min(max(contentHeight, 80), Self.maxListHeight))
 
             Divider()
             footer
