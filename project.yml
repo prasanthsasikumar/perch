@@ -18,6 +18,8 @@ packages:
     path: Plugins/AnalyticsPlugin
   MarketPlugin:
     path: Plugins/MarketPlugin
+  BusyPlugin:
+    path: Plugins/BusyPlugin
 targets:
   Perch:
     type: application
@@ -37,12 +39,14 @@ targets:
         product: AnalyticsPlugin
       - package: MarketPlugin
         product: MarketPlugin
+      - package: BusyPlugin
+        product: BusyPlugin
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.ahlab.Perch
         CODE_SIGN_ENTITLEMENTS: Perch/Perch.entitlements
-        MARKETING_VERSION: "2.1"
-        CURRENT_PROJECT_VERSION: "3"
+        MARKETING_VERSION: "2.2"
+        CURRENT_PROJECT_VERSION: "4"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
       configs:
         # Debug is signed with a real Development identity rather than ad hoc,
@@ -73,8 +77,8 @@ targets:
       properties:
         LSUIElement: true
         CFBundleDisplayName: Perch
-        CFBundleShortVersionString: "2.1"
-        CFBundleVersion: "3"
+        CFBundleShortVersionString: "2.2"
+        CFBundleVersion: "4"
         LSApplicationCategoryType: public.app-category.productivity
         ITSAppUsesNonExemptEncryption: false
         NSHumanReadableCopyright: "© 2026 Prasanth Sasikumar"
@@ -88,6 +92,8 @@ targets:
       # The .html fixtures need to reach the test bundle; the plain directory
       # entry above picks up sources, not resources.
       - path: PerchTests/Plugins/Market/Fixtures
+        buildPhase: resources
+      - path: PerchTests/Plugins/Busy/Fixtures
         buildPhase: resources
     settings:
       base:
@@ -110,3 +116,5 @@ targets:
         product: AnalyticsPlugin
       - package: MarketPlugin
         product: MarketPlugin
+      - package: BusyPlugin
+        product: BusyPlugin

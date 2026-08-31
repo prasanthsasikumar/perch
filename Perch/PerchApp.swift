@@ -1,5 +1,6 @@
 import AnalyticsPlugin
 import AppKit
+import BusyPlugin
 import MarketPlugin
 import MenuBarExtraAccess
 import MenuDoPlugin
@@ -33,6 +34,7 @@ struct PerchApp: App {
             MenuDo(context: .perch(MenuDo.identifier)),
             Analytics(context: .perch(Analytics.identifier)),
             Market(context: .perch(Market.identifier)),
+            Busy(context: .perch(Busy.identifier)),
         ]
     }
 

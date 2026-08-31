@@ -3,9 +3,10 @@
 Small tools that live in your macOS menu bar.
 
 Perch is a host. The tools themselves are plugins: today there's **Tasks**, the
-todo list Perch grew out of, and **Analytics**, which puts your Google
-Analytics numbers a click away. More can be added without disturbing what's
-already there.
+todo list Perch grew out of; **Analytics**, which puts your Google Analytics
+numbers a click away; **Market**, which watches Facebook Marketplace searches;
+and **Busy**, which shows how busy a place is right now. More can be added
+without disturbing what's already there.
 
 ## Download
 
@@ -78,6 +79,28 @@ script.
 Analytics declares `network` and `credentials`: it talks to Google, and it
 holds a service-account key. It is the first plugin in Perch to do either.
 
+### Busy
+
+How busy a place is right now — Google's live busyness, in the menu bar. Made
+for picking a gym time.
+
+- **Add a place the way you'd search for it.** Type "lion gym kesavadasapuram"
+  into the panel; Perch shows the name Google matched.
+- **Live and usual, side by side.** A coloured dot, Google's own words ("A
+  little busy"), the live figure, and what's usual for this hour — so you can
+  see busier-than-usual at a glance.
+- **Today's shape.** The popular-times histogram for the day, with the current
+  hour highlighted. The first place's live figure can sit in the menu bar.
+- **Every ten minutes, and on open.** Refreshes in the background, again when
+  you open the panel if the numbers have gone stale, and keeps the last
+  numbers on disk.
+
+Busy declares `network`. There is no official API for live busyness, so it
+loads the Google search page for each place in a hidden browser and reads the
+Popular times box — the same thing you'd see in a browser. It never signs in
+to anything. Google changes its page from time to time; when that breaks the
+reader, the panel says so rather than showing nothing.
+
 #### Setting it up
 
 1. In the [Google Cloud console](https://console.cloud.google.com), create a
@@ -128,6 +151,8 @@ Click the gear icon in the panel.
 | Plugins | Enable or disable each plugin, and see what each one can access |
 | Tasks | Per-plugin settings, when a plugin has any |
 | Analytics | Service-account key, watched properties, which one is primary |
+| Market | City, search radius, how often to check |
+| Busy | How often to check |
 
 ## Your data
 
@@ -177,6 +202,8 @@ xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=ma
 PerchKit/                The public plugin API. Knows nothing about the host.
 Plugins/MenuDoPlugin/    The Tasks plugin: model, store, views
 Plugins/AnalyticsPlugin/ The Analytics plugin: GA4 client, auth, store, views
+Plugins/MarketPlugin/    The Market plugin: Marketplace scraping, poller, store, views
+Plugins/BusyPlugin/      The Busy plugin: Google popular-times scraping, store, views
 Perch/
   PerchApp.swift         MenuBarExtra scene, plugin instantiation
   Host/                  Registry, panel chrome, menu bar label

@@ -1,4 +1,5 @@
 import Foundation
+import PerchKit
 import WebKit
 
 /// The search URL for a watch, or `nil` when there is no city to search in.
@@ -55,7 +56,7 @@ public final class FacebookSession: NSObject {
             frame: NSRect(x: 0, y: 0, width: 1280, height: 900), configuration: configuration
         )
 
-        hiddenWindow = NSWindow(
+        hiddenWindow = ParkedWindow(
             contentRect: NSRect(x: -10_000, y: -10_000, width: 1280, height: 900),
             styleMask: [.titled, .closable],
             backing: .buffered,
