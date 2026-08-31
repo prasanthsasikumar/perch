@@ -8,6 +8,22 @@ numbers a click away; **Market**, which watches Facebook Marketplace searches;
 and **Busy**, which shows how busy a place is right now. More can be added
 without disturbing what's already there.
 
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/tasks.png" width="300" alt="The Tasks tab: a todo list with the current task first"><br><sub><b>Tasks</b></sub></td>
+    <td align="center"><img src="docs/screenshots/analytics.png" width="300" alt="The Analytics tab: a card per Google Analytics property with this week's users, sessions, a sparkline, and daily rows"><br><sub><b>Analytics</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/market.png" width="300" alt="The Market tab: two Facebook Marketplace watches, one with nine new listings"><br><sub><b>Market</b></sub></td>
+    <td align="center"><img src="docs/screenshots/busy.png" width="300" alt="The Busy tab: a gym that is as busy as it gets, 89% now against a usual 90%, with today's popular-times histogram"><br><sub><b>Busy</b></sub></td>
+  </tr>
+</table>
+
+Whichever plugin you make primary owns the menu bar item — here Tasks, showing
+the current task:
+
+<img src="docs/screenshots/menubar.png" width="90" alt="The menu bar item: a checkmark icon followed by the current task's title">
+
 ## Download
 
 Grab the latest `Perch.zip` from the [Releases page](../../releases/latest),
