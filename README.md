@@ -5,8 +5,9 @@ Small tools that live in your macOS menu bar.
 Perch is a host. The tools themselves are plugins: today there's **Tasks**, a
 todo list with the current task in the menu bar; **Analytics**, which puts your Google Analytics
 numbers a click away; **Market**, which watches Facebook Marketplace searches;
-and **Busy**, which shows how busy a place is right now. More can be added
-without disturbing what's already there.
+**Busy**, which shows how busy a place is right now; and **Server**, which
+watches the health of machines you run. More can be added without disturbing
+what's already there.
 
 <table>
   <tr>
@@ -140,6 +141,44 @@ never in a folder that might one day become a git repository.
 The key goes into your login Keychain. Perch reads the file you pick once and
 never copies it or keeps a reference to it.
 
+### Server
+
+How your servers are doing, in the menu bar. Made for watching a small VPS you
+would otherwise only check after something broke.
+
+- **The things that matter, in order.** CPU, load against the core count,
+  memory, swap, disk and network, with anything worth worrying about pulled to
+  the top of the card in orange or red.
+- **Load judged against the cores.** A load average of 4 is idle on eight cores
+  and dire on one, so the bar and the warnings are both relative to the machine.
+- **Swap rate, not just swap used.** A box thrashing swap is slow long before
+  memory shows full, so Server watches pages moving in and out rather than the
+  amount parked there.
+- **What is actually eating it.** Per-container CPU and memory, the busiest
+  processes, and HTTP checks on whatever the agent is configured to watch, one
+  disclosure down.
+- **Several machines.** One card each, and the menu bar icon changes when any
+  of them is unhappy.
+
+Server declares `network` and `credentials`: it polls each machine over HTTPS,
+and a password for a server behind basic auth is kept in your login Keychain
+rather than in Perch's settings file.
+
+#### The agent
+
+Server does not log in over SSH. Each machine runs a small agent, `vpsstat`,
+which reads that machine's own `/proc` and container cgroups and serves them as
+JSON on `/api/now`. Perch polls that endpoint every minute.
+
+The agent is a single dependency-free Python file, runs under systemd with a
+64 MB memory cap, and costs about 26 MB of RAM and well under 1% of a core. Put
+it behind TLS and basic auth (Caddy does both in four lines) and give Perch the
+address, for example `https://status.example.com`.
+
+Perch keeps its own short history, so a card's sparkline covers only what Perch
+has watched. The agent's own dashboard has the full 24 hours and 30 days; open
+it from a server's ••• menu.
+
 ## Settings
 
 Click the gear icon in the panel.
@@ -175,6 +214,11 @@ sandbox one plugin away from another's permissions. Analytics sends nothing but
 authenticated requests to Google's own APIs, and stores its key in the
 Keychain rather than in the container.
 
+Server follows the same rule: it talks only to the addresses you give it, and
+each server's password goes to your login Keychain, never to the JSON document
+beside it. A password pasted into the address bar as `https://user:pass@host`
+is stripped out before the address is stored.
+
 ## Building from source
 
 Perch is a SwiftUI app built around `MenuBarExtra`. The Xcode project is
@@ -203,6 +247,7 @@ Plugins/MenuDoPlugin/    The Tasks plugin (its original name): model, store, vie
 Plugins/AnalyticsPlugin/ The Analytics plugin: GA4 client, auth, store, views
 Plugins/MarketPlugin/    The Market plugin: Marketplace scraping, poller, store, views
 Plugins/BusyPlugin/      The Busy plugin: Google popular-times scraping, store, views
+Plugins/ServerPlugin/    The Server plugin: vpsstat agent client, alert rules, store, views
 Perch/
   PerchApp.swift         MenuBarExtra scene, plugin instantiation
   Host/                  Registry, panel chrome, menu bar label

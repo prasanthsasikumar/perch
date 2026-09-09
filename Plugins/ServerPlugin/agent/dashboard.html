@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VPS Health</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%233457d5'/%3E%3Cpath d='M2 11l3-4 3 3 3-6 3 7' stroke='white' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#f7f7f5; --panel:#fff; --ink:#1a1a18; --muted:#6b6b66; --line:#e3e3df;
+  --ok:#2f855a; --warn:#b7791f; --bad:#c53030; --accent:#3457d5; --accent2:#8a5cf6;
+  --grid:#ececE8;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --bg:#131315; --panel:#1c1c1f; --ink:#eceCe8; --muted:#9a9a94; --line:#2e2e33;
+         --ok:#68d391; --warn:#f6c177; --bad:#fc8181; --accent:#7aa2f7; --accent2:#bb9af7;
+         --grid:#26262b; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:14px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:1200px;margin:0 auto;padding:20px 16px 60px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:12px;margin-bottom:18px}
+h1{font-size:19px;margin:0;font-weight:650;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:12.5px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);
+  margin-right:6px;vertical-align:1px}
+.dot.stale{background:var(--warn)}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(215px,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:13px 15px}
+.card h2{font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);
+  margin:0 0 9px;font-weight:600}
+.big{font-size:27px;font-weight:660;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.big span{font-size:14px;font-weight:500;color:var(--muted);letter-spacing:0}
+.row{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:2.5px 0}
+.row span:last-child{font-variant-numeric:tabular-nums;color:var(--muted)}
+.bar{height:6px;border-radius:3px;background:var(--grid);overflow:hidden;margin:9px 0 7px}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:3px;
+  transition:width .4s ease}
+.bar i.warn{background:var(--warn)} .bar i.bad{background:var(--bad)}
+.ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+section{margin-top:24px}
+section > h2{font-size:12px;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--muted);margin:0 0 10px;font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;font-weight:600;color:var(--muted);font-size:11px;
+  text-transform:uppercase;letter-spacing:.05em;padding:0 8px 6px 0;white-space:nowrap}
+td{padding:5px 8px 5px 0;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
+td.name{font-weight:520;font-variant-numeric:normal}
+.scroll{overflow-x:auto}
+.chart{background:var(--panel);border:1px solid var(--line);border-radius:11px;
+  padding:13px 15px;margin-bottom:12px}
+.chart h3{font-size:12px;margin:0 0 2px;font-weight:600}
+.chart .legend{font-size:11.5px;color:var(--muted);margin-bottom:8px}
+.chart .legend b{font-weight:600}
+svg{display:block;width:100%;height:110px;overflow:visible}
+.tabs{display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap}
+.tabs button{font:inherit;font-size:12px;padding:4px 11px;border-radius:99px;cursor:pointer;
+  border:1px solid var(--line);background:var(--panel);color:var(--muted)}
+.tabs button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.pill{display:inline-block;padding:1px 7px;border-radius:99px;font-size:11px;font-weight:600}
+.pill.up{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
+.pill.down{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad)}
+.alerts{margin-bottom:16px;display:grid;gap:7px}
+.alert{border-radius:9px;padding:9px 13px;font-size:13px;border:1px solid}
+.alert.warn{border-color:color-mix(in srgb,var(--warn) 45%,transparent);
+  background:color-mix(in srgb,var(--warn) 11%,transparent)}
+.alert.bad{border-color:color-mix(in srgb,var(--bad) 45%,transparent);
+  background:color-mix(in srgb,var(--bad) 11%,transparent)}
+.alert b{font-weight:640}
+footer{margin-top:30px;color:var(--muted);font-size:11.5px}
+@media (max-width:520px){ .big{font-size:23px} .wrap{padding:14px 11px 44px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>VPS Health</h1>
+    <div class="sub"><span class="dot" id="live"></span><span id="hostline">connecting…</span></div>
+  </header>
+
+  <div class="alerts" id="alerts"></div>
+  <div class="grid" id="cards"></div>
+
+  <section>
+    <h2>History</h2>
+    <div class="tabs" id="tabs"></div>
+    <div id="charts"></div>
+  </section>
+
+  <section>
+    <h2>Containers</h2>
+    <div class="card scroll"><table id="containers"></table></div>
+  </section>
+
+  <section class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
+    <div>
+      <h2>Top processes by CPU</h2>
+      <div class="card scroll"><table id="topcpu"></table></div>
+    </div>
+    <div>
+      <h2>Top processes by memory</h2>
+      <div class="card scroll"><table id="topmem"></table></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Services</h2>
+    <div class="card scroll"><table id="services"></table></div>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+
+/* ---------- formatting ---------- */
+function bytes(n, digits){
+  n = Number(n)||0; const u=["B","KB","MB","GB","TB"]; let i=0;
+  while(n>=1024 && i<u.length-1){ n/=1024; i++; }
+  return n.toFixed(digits===undefined ? (n<10&&i>0?1:0) : digits)+" "+u[i];
+}
+const rate = n => bytes(n)+"/s";
+function dur(s){
+  s=Math.floor(s); const d=Math.floor(s/86400), h=Math.floor(s%86400/3600), m=Math.floor(s%3600/60);
+  return d?`${d}d ${h}h`: h?`${h}h ${m}m`: `${m}m`;
+}
+const pct = (a,b) => b>0 ? (a/b*100) : 0;
+const clamp = n => Math.max(0, Math.min(100, n));
+
+/* ---------- state ---------- */
+let RANGE = "1h";
+const RANGES = [["1h","1 hour"],["6h","6 hours"],["24h","24 hours"],["7d","7 days"],["30d","30 days"]];
+let COLS = null;
+
+/* ---------- cards ---------- */
+function bar(v, warn, bad){
+  const c = v>=bad ? "bad" : v>=warn ? "warn" : "";
+  return `<div class="bar"><i class="${c}" style="width:${clamp(v)}%"></i></div>`;
+}
+function card(title, body){ return `<div class="card"><h2>${title}</h2>${body}</div>`; }
+
+function renderCards(d){
+  const cpuBusy = 100 - (d.cpu_idle||0);
+  const loadPct = pct(d.load1, d.ncpu)*1;
+  const memP = pct(d.mem_used, d.mem_total);
+  const swapP = pct(d.swap_used, d.swap_total);
+  const fsP = pct(d.fs_used, d.fs_total);
+  const t = d.traffic || {today:{rx:0,tx:0}, month:{rx:0,tx:0}};
+
+  const out = [];
+  out.push(card("CPU", `
+    <div class="big">${cpuBusy.toFixed(1)}<span>%</span></div>
+    ${bar(cpuBusy,70,90)}
+    <div class="row"><span>user</span><span>${(d.cpu_user||0).toFixed(1)}%</span></div>
+    <div class="row"><span>system</span><span>${(d.cpu_sys||0).toFixed(1)}%</span></div>
+    <div class="row"><span>io wait</span><span>${(d.cpu_iowait||0).toFixed(1)}%</span></div>
+    <div class="row"><span>steal</span><span class="${(d.cpu_steal||0)>5?'bad':''}">${(d.cpu_steal||0).toFixed(1)}%</span></div>`));
+
+  out.push(card(`Load · ${d.ncpu} core${d.ncpu>1?'s':''}`, `
+    <div class="big">${(d.load1||0).toFixed(2)}</div>
+    ${bar(loadPct,100,200)}
+    <div class="row"><span>5 min</span><span>${(d.load5||0).toFixed(2)}</span></div>
+    <div class="row"><span>15 min</span><span>${(d.load15||0).toFixed(2)}</span></div>
+    <div class="row"><span>runnable / tasks</span><span>${d.procs_running||0} / ${d.procs||0}</span></div>
+    <div class="row"><span>blocked on I/O</span><span>${d.procs_blocked||0}</span></div>`));
+
+  out.push(card("Memory", `
+    <div class="big">${bytes(d.mem_used)}<span> / ${bytes(d.mem_total)}</span></div>
+    ${bar(memP,75,90)}
+    <div class="row"><span>available</span><span>${bytes(d.mem_avail)}</span></div>
+    <div class="row"><span>cache / buffers</span><span>${bytes(d.mem_cache)}</span></div>`));
+
+  out.push(card("Swap", `
+    <div class="big">${bytes(d.swap_used)}<span> / ${bytes(d.swap_total)}</span></div>
+    ${bar(swapP,25,60)}
+    <div class="row"><span>swap in</span><span class="${(d.swap_in||0)>0?'warn':''}">${rate(d.swap_in)}</span></div>
+    <div class="row"><span>swap out</span><span class="${(d.swap_out||0)>0?'warn':''}">${rate(d.swap_out)}</span></div>`));
+
+  out.push(card("Network · eth0", `
+    <div class="big">${bytes((d.net_rx_bps||0)+(d.net_tx_bps||0))}<span>/s</span></div>
+    <div class="row"><span>↓ in</span><span>${rate(d.net_rx_bps)}</span></div>
+    <div class="row"><span>↑ out</span><span>${rate(d.net_tx_bps)}</span></div>
+    <div class="row" style="border-top:1px solid var(--line);margin-top:6px;padding-top:6px">
+      <span>today</span><span>↓${bytes(t.today.rx)} ↑${bytes(t.today.tx)}</span></div>
+    <div class="row"><span>this month</span><span>↓${bytes(t.month.rx)} ↑${bytes(t.month.tx)}</span></div>`));
+
+  out.push(card("Disk · /", `
+    <div class="big">${fsP.toFixed(0)}<span>% used</span></div>
+    ${bar(fsP,80,90)}
+    <div class="row"><span>used / total</span><span>${bytes(d.fs_used)} / ${bytes(d.fs_total)}</span></div>
+    <div class="row"><span>free</span><span>${bytes((d.fs_total||0)-(d.fs_used||0))}</span></div>
+    <div class="row"><span>read / write</span><span>${rate(d.disk_read_bps)} · ${rate(d.disk_write_bps)}</span></div>`));
+
+  $("cards").innerHTML = out.join("");
+}
+
+/* ---------- alerts ---------- */
+function renderAlerts(d){
+  const a = [];
+  const fsP = pct(d.fs_used, d.fs_total);
+  if(fsP >= 90) a.push(["bad", `Root filesystem is <b>${fsP.toFixed(0)}% full</b> — ${bytes(d.fs_total-d.fs_used)} left.`]);
+  else if(fsP >= 80) a.push(["warn", `Root filesystem is <b>${fsP.toFixed(0)}% full</b> — ${bytes(d.fs_total-d.fs_used)} left.`]);
+  if(d.load1 >= d.ncpu*2) a.push(["bad", `Load average <b>${d.load1.toFixed(2)}</b> on ${d.ncpu} core — processes are queuing for CPU.`]);
+  else if(d.load1 >= d.ncpu) a.push(["warn", `Load average <b>${d.load1.toFixed(2)}</b> is at or above ${d.ncpu} core.`]);
+  if((d.swap_in||0)+(d.swap_out||0) > 0) a.push(["warn", `Actively swapping right now (<b>in ${rate(d.swap_in)}, out ${rate(d.swap_out)}</b>) — RAM is the bottleneck.`]);
+  else if(pct(d.swap_used,d.swap_total) > 25) a.push(["warn", `<b>${bytes(d.swap_used)}</b> sitting in swap.`]);
+  if((d.cpu_steal||0) > 5) a.push(["warn", `CPU steal <b>${d.cpu_steal.toFixed(1)}%</b> — the host is giving your vCPU to someone else.`]);
+  if((d.zombies||0) > 0) a.push(["warn", `<b>${d.zombies}</b> zombie process${d.zombies>1?"es":""} — a parent is not reaping children.`]);
+  const down = (d.health||[]).filter(h=>!h.ok).map(h=>h.name);
+  if(down.length) a.push(["bad", `Unreachable: <b>${down.join(", ")}</b>.`]);
+  const dead = (d.units||[]).filter(u=>!u.ok).map(u=>u.name);
+  if(dead.length) a.push(["bad", `systemd units not active: <b>${dead.join(", ")}</b>.`]);
+  $("alerts").innerHTML = a.map(([k,m])=>`<div class="alert ${k}">${m}</div>`).join("");
+}
+
+/* ---------- tables ---------- */
+function table(el, head, rows){
+  $(el).innerHTML = `<thead><tr>${head.map(h=>`<th>${h}</th>`).join("")}</tr></thead>` +
+    `<tbody>${rows.map(r=>`<tr>${r.map((c,i)=>`<td class="${i===0?'name':''}">${c}</td>`).join("")}</tr>`).join("")}</tbody>`;
+}
+function renderTables(d){
+  table("containers", ["Container","CPU","Memory","Uptime"],
+    (d.containers||[]).map(c=>[c.name, c.cpu.toFixed(1)+"%", bytes(c.mem), c.status.replace(/^Up /,"")]));
+  table("topcpu", ["Process","PID","CPU","RSS"],
+    (d.top_cpu||[]).map(p=>[p.name, p.pid, p.cpu.toFixed(1)+"%", bytes(p.rss)]));
+  table("topmem", ["Process","PID","RSS","CPU"],
+    (d.top_mem||[]).map(p=>[p.name, p.pid, bytes(p.rss), p.cpu.toFixed(1)+"%"]));
+  const svc = (d.units||[]).map(u=>[u.name, `<span class="pill ${u.ok?'up':'down'}">${u.state}</span>`, "systemd", ""])
+    .concat((d.health||[]).map(h=>[h.name,
+      `<span class="pill ${h.ok?'up':'down'}">${h.ok?('HTTP '+h.code):(h.error||'down')}</span>`,
+      "https", h.ok? h.ms+" ms" : ""]));
+  table("services", ["Service","Status","Kind","Latency"], svc);
+}
+
+/* ---------- charts ---------- */
+const W = 760, H = 110;
+function path(vals, max){
+  if(!vals.length) return "";
+  const n = vals.length;
+  return vals.map((v,i)=>{
+    const x = n===1 ? 0 : i/(n-1)*W;
+    const y = H - (max>0 ? Math.min(v,max)/max : 0)*H;
+    return (i?"L":"M")+x.toFixed(1)+" "+y.toFixed(1);
+  }).join(" ");
+}
+function area(vals, max){
+  const p = path(vals, max);
+  return p ? p+` L${W} ${H} L0 ${H} Z` : "";
+}
+function chart(title, legend, series, max, fmt){
+  const id = "g"+Math.random().toString(36).slice(2,8);
+  const lines = series.map((s,i)=>`
+      <path d="${area(s.vals,max)}" fill="url(#${id}-${i})" stroke="none"/>
+      <path d="${path(s.vals,max)}" fill="none" stroke="${s.color}" stroke-width="1.6"
+            stroke-linejoin="round" stroke-linecap="round"/>`).join("");
+  const defs = series.map((s,i)=>`
+      <linearGradient id="${id}-${i}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${s.color}" stop-opacity=".22"/>
+        <stop offset="100%" stop-color="${s.color}" stop-opacity="0"/>
+      </linearGradient>`).join("");
+  const key = series.map(s=>`<b style="color:${s.color}">■</b> ${s.name}`).join("&nbsp;&nbsp;");
+  return `<div class="chart">
+    <h3>${title}</h3>
+    <div class="legend">${key} &nbsp;·&nbsp; peak ${fmt(max)}</div>
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${title}">
+      <defs>${defs}</defs>
+      <line x1="0" y1="${H}" x2="${W}" y2="${H}" stroke="var(--grid)" stroke-width="1"/>
+      <line x1="0" y1="${H/2}" x2="${W}" y2="${H/2}" stroke="var(--grid)" stroke-width="1"
+            stroke-dasharray="3 4"/>
+      ${lines}
+    </svg></div>`;
+}
+function col(hist, name){
+  const i = hist.cols.indexOf(name);
+  return i < 0 ? [] : hist.rows.map(r => Number(r[i])||0);
+}
+function renderCharts(hist, ncpu){
+  if(!hist.rows.length){ $("charts").innerHTML = `<div class="card">No history for this range yet.</div>`; return; }
+  const A = getComputedStyle(document.documentElement);
+  const c1 = A.getPropertyValue("--accent").trim(), c2 = A.getPropertyValue("--accent2").trim();
+  const cw = A.getPropertyValue("--warn").trim(), cb = A.getPropertyValue("--bad").trim();
+  const cpu = col(hist,"cpu_idle").map(v=>100-v);
+  const load = col(hist,"load1");
+  const memU = col(hist,"mem_used"), memT = col(hist,"mem_total");
+  const swp = col(hist,"swap_used");
+  const rx = col(hist,"net_rx_bps"), tx = col(hist,"net_tx_bps");
+  const rd = col(hist,"disk_read_bps"), wr = col(hist,"disk_write_bps");
+  const mx = (...a) => Math.max(1, ...a.flat());
+  const pctf = v => v.toFixed(0)+"%";
+  $("charts").innerHTML =
+    chart("CPU busy", "", [{name:"busy",vals:cpu,color:c1}], 100, pctf) +
+    chart("Load average (1 min)", "", [{name:"load1",vals:load,color:cw}],
+          Math.max(ncpu, mx(load)), v=>v.toFixed(2)) +
+    chart("Memory & swap used", "", [{name:"memory",vals:memU,color:c1},{name:"swap",vals:swp,color:cb}],
+          mx(memT.length?memT:[1]), bytes) +
+    chart("Network throughput", "", [{name:"in",vals:rx,color:c1},{name:"out",vals:tx,color:c2}],
+          mx(rx,tx), rate) +
+    chart("Disk throughput", "", [{name:"read",vals:rd,color:c1},{name:"write",vals:wr,color:c2}],
+          mx(rd,wr), rate);
+}
+
+/* ---------- polling ---------- */
+let lastOk = 0;
+async function tick(){
+  try{
+    const d = await (await fetch("/api/now",{cache:"no-store"})).json();
+    if(!d.ready){ $("hostline").textContent = "warming up, first sample in ~10s…"; return; }
+    lastOk = Date.now();
+    $("live").classList.remove("stale");
+    $("hostline").textContent =
+      `${d.host} · up ${dur(d.uptime)} · ${new Date(d.ts*1000).toLocaleTimeString()}`;
+    renderAlerts(d); renderCards(d); renderTables(d);
+    const since = d.traffic && d.traffic.since ? d.traffic.since : "today";
+    $("foot").textContent =
+      `Traffic totals count from ${since}, when this collector started \u2014 not from boot. ` +
+      `vpsstat using ${bytes(d.self_rss)} RSS \u00b7 ${d.net_drop} dropped packets, ` +
+      `${d.net_err} interface errors since boot \u00b7 refreshes every 10s.`;
+  }catch(e){
+    if(Date.now()-lastOk > 25000) $("live").classList.add("stale");
+  }
+}
+async function loadHistory(){
+  try{
+    const h = await (await fetch("/api/history?range="+RANGE,{cache:"no-store"})).json();
+    const now = await (await fetch("/api/now",{cache:"no-store"})).json();
+    renderCharts(h, now.ncpu||1);
+  }catch(e){}
+}
+$("tabs").innerHTML = RANGES.map(([k,l])=>
+  `<button data-r="${k}" aria-pressed="${k===RANGE}">${l}</button>`).join("");
+$("tabs").addEventListener("click", e => {
+  const b = e.target.closest("button"); if(!b) return;
+  RANGE = b.dataset.r;
+  [...$("tabs").children].forEach(x=>x.setAttribute("aria-pressed", x===b));
+  loadHistory();
+});
+tick(); loadHistory();
+setInterval(tick, 10000);
+setInterval(loadHistory, 60000);
+</script>
+</body>
+</html>

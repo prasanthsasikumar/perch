@@ -5,6 +5,7 @@ import MarketPlugin
 import MenuBarExtraAccess
 import MenuDoPlugin
 import PerchKit
+import ServerPlugin
 import SwiftUI
 
 extension PluginContext {
@@ -35,6 +36,7 @@ struct PerchApp: App {
             Analytics(context: .perch(Analytics.identifier)),
             Market(context: .perch(Market.identifier)),
             Busy(context: .perch(Busy.identifier)),
+            Server(context: .perch(Server.identifier)),
         ]
     }
 
