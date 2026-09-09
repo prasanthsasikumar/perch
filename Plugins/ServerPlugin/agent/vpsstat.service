@@ -1,0 +1,24 @@
+[Unit]
+Description=vpsstat host health collector
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+# What to health-check and which units to report. Both are optional; leave
+# VPSSTAT_HEALTH unset to check nothing.
+#Environment=VPSSTAT_HEALTH=api=https://api.example.com/,web=https://example.com/
+#Environment=VPSSTAT_UNITS=caddy,docker,ssh,vpsstat
+ExecStart=/usr/bin/python3 /usr/local/bin/vpsstat.py
+Restart=always
+RestartSec=5
+Nice=10
+# Never let the monitor become the problem it is meant to diagnose.
+MemoryMax=64M
+CPUWeight=20
+IOWeight=20
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

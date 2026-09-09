@@ -20,6 +20,8 @@ packages:
     path: Plugins/MarketPlugin
   BusyPlugin:
     path: Plugins/BusyPlugin
+  ServerPlugin:
+    path: Plugins/ServerPlugin
 targets:
   Perch:
     type: application
@@ -41,6 +43,8 @@ targets:
         product: MarketPlugin
       - package: BusyPlugin
         product: BusyPlugin
+      - package: ServerPlugin
+        product: ServerPlugin
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.ahlab.Perch
@@ -123,3 +127,5 @@ targets:
         product: MarketPlugin
       - package: BusyPlugin
         product: BusyPlugin
+      - package: ServerPlugin
+        product: ServerPlugin
