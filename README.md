@@ -37,18 +37,12 @@ Requires macOS 14 (Sonoma) or later. Apple Silicon and Intel are both supported.
 
 ### First launch
 
-This build is signed ad hoc rather than with a paid Apple Developer certificate,
-so macOS Gatekeeper will block it the first time. To open it:
+Releases are signed with a Developer ID certificate and notarized by Apple, so
+`Perch.app` opens with a normal double-click. No Gatekeeper workaround is
+needed.
 
-1. Right click (or Control click) `Perch.app` and choose **Open**.
-2. Click **Open** again in the dialog that appears.
-
-You only need to do this once. If macOS still refuses, run this in Terminal and
-try again:
-
-```bash
-xattr -dr com.apple.quarantine /Applications/Perch.app
-```
+(Releases before v2.2.1 were signed ad hoc and did need right click › **Open**
+the first time.)
 
 ## Plugins
 
