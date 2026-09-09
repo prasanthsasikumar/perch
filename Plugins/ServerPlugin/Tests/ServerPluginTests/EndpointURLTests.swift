@@ -75,3 +75,50 @@ final class EndpointURLTests: XCTestCase {
         )
     }
 }
+
+/// The bug this class exists for: a server was added as `http://host`, macOS
+/// refused the cleartext connection, and the panel reported "Couldn't reach",
+/// which pointed the diagnosis at the server rather than at the scheme.
+final class EndpointSchemeTests: XCTestCase {
+    func testPublicHTTPIsUpgradedToHTTPS() {
+        XCTAssertEqual(
+            EndpointURL.normalise("http://status.example.com")?.absoluteString,
+            "https://status.example.com/api/now"
+        )
+    }
+
+    func testUpgradeSurvivesAPathAndPort() {
+        XCTAssertEqual(
+            EndpointURL.normalise("http://status.example.com:8443/vps")?.absoluteString,
+            "https://status.example.com:8443/vps/api/now"
+        )
+    }
+
+    /// An SSH tunnel to the agent is the documented way to reach it without a
+    /// proxy, and ATS permits loopback, so http must survive there.
+    func testLoopbackKeepsHTTP() {
+        for address in ["http://127.0.0.1:9110", "http://localhost:9110"] {
+            XCTAssertTrue(
+                EndpointURL.normalise(address)?.scheme == "http",
+                "\(address) should stay http"
+            )
+        }
+    }
+
+    func testPrivateNetworkKeepsHTTP() {
+        for address in ["http://192.168.1.10:9110", "http://10.0.0.5", "http://172.16.4.4",
+                        "http://nas.local:9110"] {
+            XCTAssertEqual(EndpointURL.normalise(address)?.scheme, "http", address)
+        }
+    }
+
+    /// 172.32 is outside the private range and is a public address.
+    func testAddressesOutsideThePrivateRangeAreUpgraded() {
+        XCTAssertEqual(EndpointURL.normalise("http://172.32.0.1")?.scheme, "https")
+        XCTAssertEqual(EndpointURL.normalise("http://172.15.0.1")?.scheme, "https")
+    }
+
+    func testHTTPSIsLeftAlone() {
+        XCTAssertEqual(EndpointURL.normalise("https://status.example.com")?.scheme, "https")
+    }
+}

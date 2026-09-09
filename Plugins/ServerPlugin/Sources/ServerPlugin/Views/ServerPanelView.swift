@@ -10,11 +10,18 @@ struct ServerPanelView: View {
     /// right now".
     private static let openRefreshAge: TimeInterval = 30
 
+    /// Which field Return should move to next. The address field must not
+    /// submit the form: doing so discarded whatever the user was about to type
+    /// into username and password, and the server was saved with no credential
+    /// at all.
+    private enum Field: Hashable { case address, username, password }
+
     @State private var isAdding = false
     @State private var address = ""
     @State private var username = ""
     @State private var password = ""
     @State private var addressError: String?
+    @FocusState private var focused: Field?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -26,6 +33,12 @@ struct ServerPanelView: View {
                 }
 
                 if let notice = store.saveFailureNotice {
+                    Text(notice)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+
+                if let notice = store.credentialFailureNotice {
                     Text(notice)
                         .font(.caption)
                         .foregroundStyle(.red)
@@ -51,7 +64,7 @@ struct ServerPanelView: View {
                     Divider()
                     addForm
                 } else if !store.servers.isEmpty {
-                    Button("Add a server") { isAdding = true }
+                    Button("Add a server") { isAdding = true; focused = .address }
                         .buttonStyle(.link)
                         .font(.caption)
                 }
@@ -76,7 +89,7 @@ struct ServerPanelView: View {
             Text("Point this at a machine running the vpsstat agent, for example https://status.example.com.")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
-            Button("Add a server") { isAdding = true }
+            Button("Add a server") { isAdding = true; focused = .address }
                 .buttonStyle(.link)
                 .font(.caption)
         }
@@ -86,12 +99,16 @@ struct ServerPanelView: View {
         VStack(alignment: .leading, spacing: 6) {
             TextField("https://status.example.com", text: $address)
                 .textFieldStyle(.roundedBorder)
-                .onSubmit(add)
+                .focused($focused, equals: .address)
+                .onSubmit { focused = .username }
             HStack(spacing: 6) {
                 TextField("Username (optional)", text: $username)
                     .textFieldStyle(.roundedBorder)
+                    .focused($focused, equals: .username)
+                    .onSubmit { focused = .password }
                 SecureField("Password", text: $password)
                     .textFieldStyle(.roundedBorder)
+                    .focused($focused, equals: .password)
                     .onSubmit(add)
             }
             if let addressError {

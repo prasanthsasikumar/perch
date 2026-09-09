@@ -36,10 +36,15 @@ public struct HTTPSnapshotSource: SnapshotSource {
 
         let data: Data
         let response: URLResponse
+        let host = request.url.host ?? "the server"
         do {
             (data, response) = try await session.data(for: urlRequest)
+        } catch let error as URLError {
+            // Distinguish the failures that have different fixes: a blocked
+            // cleartext connection is not the same problem as a dead host.
+            throw ServerError.from(error, host: host)
         } catch {
-            throw ServerError.unreachable(request.url.host ?? "the server")
+            throw ServerError.unreachable(host)
         }
 
         guard let http = response as? HTTPURLResponse else { throw ServerError.notAnAgent }

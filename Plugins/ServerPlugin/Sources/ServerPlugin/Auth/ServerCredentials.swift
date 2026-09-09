@@ -13,7 +13,12 @@ import Security
 /// needs a keychain, that is the moment to lift one into PerchKit.
 public protocol ServerCredentialStore: Sendable {
     func password(for id: UUID) -> String?
-    func setPassword(_ password: String?, for id: UUID)
+    /// Returns false if the password could not be stored. The result is not
+    /// discardable on purpose: a silently dropped credential is
+    /// indistinguishable to the user from a server that rejects their
+    /// password, and sends them looking in the wrong place.
+    @discardableResult
+    func setPassword(_ password: String?, for id: UUID) -> Bool
     func removePassword(for id: UUID)
 }
 
@@ -44,10 +49,11 @@ public struct KeychainServerCredentials: ServerCredentialStore {
         return String(data: data, encoding: .utf8)
     }
 
-    public func setPassword(_ password: String?, for id: UUID) {
+    @discardableResult
+    public func setPassword(_ password: String?, for id: UUID) -> Bool {
         guard let password, !password.isEmpty else {
             removePassword(for: id)
-            return
+            return true
         }
         // Delete-then-add rather than SecItemUpdate: the update path needs a
         // different query shape depending on whether the item already exists,
@@ -56,7 +62,7 @@ public struct KeychainServerCredentials: ServerCredentialStore {
         var attributes = query(id)
         attributes[kSecValueData as String] = Data(password.utf8)
         attributes[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-        SecItemAdd(attributes as CFDictionary, nil)
+        return SecItemAdd(attributes as CFDictionary, nil) == errSecSuccess
     }
 
     public func removePassword(for id: UUID) {
@@ -75,8 +81,14 @@ public final class InMemoryServerCredentials: ServerCredentialStore, @unchecked 
         lock.withLock { storage[id] }
     }
 
-    public func setPassword(_ password: String?, for id: UUID) {
+    /// Set to false to exercise the "the Keychain refused it" path.
+    public var succeeds = true
+
+    @discardableResult
+    public func setPassword(_ password: String?, for id: UUID) -> Bool {
+        guard succeeds else { return false }
         lock.withLock { storage[id] = password }
+        return true
     }
 
     public func removePassword(for id: UUID) {

@@ -238,3 +238,44 @@ final class ServerStoreTests: XCTestCase {
         XCTAssertTrue(reloaded.servers.isEmpty)
     }
 }
+
+@MainActor
+final class ServerCredentialFailureTests: XCTestCase {
+    /// A Keychain that refuses the write must not leave the user with a server
+    /// that silently has no password: every refresh would then report a wrong
+    /// password, which is a lie about where the problem is.
+    func testARefusedKeychainWriteIsReported() {
+        let credentials = InMemoryServerCredentials()
+        credentials.succeeds = false
+        let store = ServerStore(
+            storage: makeTemporaryStorage(),
+            source: FakeSnapshotSource(),
+            credentials: credentials
+        )
+        store.addServer(address: "https://a.example.com", username: "me", password: "hunter2")
+        XCTAssertNotNil(store.credentialFailureNotice)
+    }
+
+    func testASuccessfulWriteLeavesNoNotice() {
+        let store = ServerStore(
+            storage: makeTemporaryStorage(),
+            source: FakeSnapshotSource(),
+            credentials: InMemoryServerCredentials()
+        )
+        store.addServer(address: "https://a.example.com", username: "me", password: "hunter2")
+        XCTAssertNil(store.credentialFailureNotice)
+    }
+
+    /// Adding a server with no password at all is ordinary, not a failure.
+    func testNoPasswordIsNotAFailure() {
+        let credentials = InMemoryServerCredentials()
+        credentials.succeeds = false
+        let store = ServerStore(
+            storage: makeTemporaryStorage(),
+            source: FakeSnapshotSource(),
+            credentials: credentials
+        )
+        store.addServer(address: "https://a.example.com")
+        XCTAssertNil(store.credentialFailureNotice)
+    }
+}

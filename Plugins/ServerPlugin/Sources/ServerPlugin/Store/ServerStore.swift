@@ -27,6 +27,10 @@ public final class ServerStore {
     public private(set) var isRefreshing = false
     public private(set) var loadFailureNotice: String?
     public private(set) var saveFailureNotice: String?
+    /// Set when the Keychain refused to hold a password. Without this the
+    /// server is added, the password is gone, and every refresh reports a
+    /// wrong password instead of the truth.
+    public private(set) var credentialFailureNotice: String?
 
     private let storage: PluginStorage
     private let source: SnapshotSource
@@ -76,7 +80,13 @@ public final class ServerStore {
             createdAt: clock()
         )
         servers.append(target)
-        credentials.setPassword(password, for: target.id)
+        if let password, !password.isEmpty,
+           !credentials.setPassword(password, for: target.id) {
+            credentialFailureNotice =
+                "Couldn't save the password for \(target.name) to your Keychain."
+        } else {
+            credentialFailureNotice = nil
+        }
         scheduleSave()
         return target
     }
