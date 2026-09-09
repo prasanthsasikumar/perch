@@ -18,6 +18,9 @@ what's already there.
     <td align="center"><img src="docs/screenshots/market.png" width="300" alt="The Market tab: two Facebook Marketplace watches, one with nine new listings"><br><sub><b>Market</b></sub></td>
     <td align="center"><img src="docs/screenshots/busy.png" width="300" alt="The Busy tab: a gym that is as busy as it gets, 89% now against a usual 90%, with today's popular-times histogram"><br><sub><b>Busy</b></sub></td>
   </tr>
+  <tr>
+    <td align="center" colspan="2"><img src="docs/screenshots/server.png" width="300" alt="The Server tab: a card for one machine with CPU, load against two cores, memory, swap, disk and network, and a warning that the disk is 82% full"><br><sub><b>Server</b></sub></td>
+  </tr>
 </table>
 
 Whichever plugin you make primary owns the menu bar item — here Tasks, showing
