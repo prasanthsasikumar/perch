@@ -56,8 +56,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.ahlab.Perch
         CODE_SIGN_ENTITLEMENTS: Perch/Perch.entitlements
-        MARKETING_VERSION: "2.3.1"
-        CURRENT_PROJECT_VERSION: "7"
+        MARKETING_VERSION: "2.4.0"
+        CURRENT_PROJECT_VERSION: "8"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
       configs:
         # Debug is signed with a real Development identity rather than ad hoc,
@@ -93,8 +93,8 @@ targets:
       properties:
         LSUIElement: true
         CFBundleDisplayName: Perch
-        CFBundleShortVersionString: "2.3.1"
-        CFBundleVersion: "7"
+        CFBundleShortVersionString: "2.4.0"
+        CFBundleVersion: "8"
         LSApplicationCategoryType: public.app-category.productivity
         ITSAppUsesNonExemptEncryption: false
         NSHumanReadableCopyright: "© 2026 Prasanth Sasikumar"
@@ -124,8 +124,8 @@ targets:
       base:
         PRODUCT_NAME: PerchKeepAwake
         PRODUCT_BUNDLE_IDENTIFIER: org.ahlab.Perch.keepawake
-        MARKETING_VERSION: "2.3.1"
-        CURRENT_PROJECT_VERSION: "7"
+        MARKETING_VERSION: "2.4.0"
+        CURRENT_PROJECT_VERSION: "8"
         SKIP_INSTALL: YES
       configs:
         Debug:
@@ -145,8 +145,8 @@ targets:
       properties:
         LSUIElement: true
         CFBundleDisplayName: Perch Keep Awake
-        CFBundleShortVersionString: "2.3.1"
-        CFBundleVersion: "7"
+        CFBundleShortVersionString: "2.4.0"
+        CFBundleVersion: "8"
         NSHumanReadableCopyright: "© 2026 Prasanth Sasikumar"
   # The root helper behind the keep-awake toggle. Registered with
   # SMAppService.daemon by PerchKeepAwake and run by launchd, never launched directly.
