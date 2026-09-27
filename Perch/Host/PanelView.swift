@@ -5,6 +5,7 @@ import SwiftUI
 /// The dropdown. Chrome belongs to the host; the middle belongs to a plugin.
 struct PanelView: View {
     @Bindable var registry: PluginRegistry
+    let sleep: SleepController
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -26,10 +27,17 @@ struct PanelView: View {
 
             PanelFooter(
                 actions: registry.active?.plugin.footerActions ?? [],
+                sleep: sleep,
                 onQuit: quit
             )
         }
         .frame(width: 320)
+        // The setting can be changed from Terminal while the panel is
+        // closed; re-read it every time the panel is shown.
+        .onAppear { sleep.refresh() }
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
+            sleep.refresh()
+        }
     }
 
     /// Gives every enabled plugin a chance to flush before the process dies.

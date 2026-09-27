@@ -216,6 +216,24 @@ each server's password goes to your login Keychain, never to the JSON document
 beside it. A password pasted into the address bar as `https://user:pass@host`
 is stripped out before the address is stored.
 
+## Keep awake
+
+The cup in the panel's footer keeps your Mac awake when the lid is closed. It
+is the same setting as `sudo pmset -a disablesleep 1`, without the Terminal.
+
+- **One approval, once.** The setting needs root, so Perch ships a small
+  helper. The first click opens System Settings → Login Items; allow **Perch
+  Keep Awake** there, click the cup again, and every click after that is
+  instant.
+- **It stays on until you turn it off**, including after you quit Perch or
+  restart. A Mac that stays awake in a bag runs hot and drains its battery,
+  so turn it off when you are done.
+- **The cup tells the truth.** Perch reads the setting from the system each
+  time the panel opens, so it is right even if you changed it from Terminal.
+
+The helper does one thing, accepts requests only from Perch, and exits a few
+seconds after each use.
+
 ## Building from source
 
 Perch is a SwiftUI app built around `MenuBarExtra`. The Xcode project is
@@ -240,11 +258,14 @@ xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=ma
 
 ```
 PerchKit/                The public plugin API. Knows nothing about the host.
-Plugins/MenuDoPlugin/    The Tasks plugin (its original name): model, store, views
+Plugins/TasksPlugin/    The Tasks plugin: model, store, views
 Plugins/AnalyticsPlugin/ The Analytics plugin: GA4 client, auth, store, views
 Plugins/MarketPlugin/    The Market plugin: Marketplace scraping, poller, store, views
 Plugins/BusyPlugin/      The Busy plugin: Google popular-times scraping, store, views
 Plugins/ServerPlugin/    The Server plugin: vpsstat agent client, alert rules, store, views
+PerchKeepAwake/          The companion app that registers the keep-awake helper
+PerchHelper/             The root helper behind the keep-awake toggle
+Shared/                  What the app, the companion and the helper all compile
 Perch/
   PerchApp.swift         MenuBarExtra scene, plugin instantiation
   Host/                  Registry, panel chrome, menu bar label

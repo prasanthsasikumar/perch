@@ -88,11 +88,11 @@ each row, and skips `.gesture(dragGesture(for:))` for the editing row.
 
 `rename` is pure store logic and is covered by unit tests:
 
-- `MenuDoTests/TaskStoreLogicTests.swift` — renames the matching item and
+- `TasksTests/TaskStoreLogicTests.swift` — renames the matching item and
   leaves others alone; trims surrounding whitespace; no-ops on an empty or
   whitespace-only title; no-ops on an unknown id; does not change `isDone`,
   `sortOrder`, or `createdAt`.
-- `MenuDoTests/TaskStorePersistenceTests.swift` — a renamed title survives a
+- `TasksTests/TaskStorePersistenceTests.swift` — a renamed title survives a
   save/load round trip.
 
 The view interaction is not unit-testable here, so double-click, Esc, commit

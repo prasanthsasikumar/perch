@@ -1,5 +1,5 @@
 import XCTest
-import MenuDoPlugin
+import TasksPlugin
 
 final class DragReorderTests: XCTestCase {
     /// Five uniform rows, the common case.

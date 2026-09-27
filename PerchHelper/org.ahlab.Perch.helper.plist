@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>org.ahlab.Perch.helper</string>
+	<key>BundleProgram</key>
+	<string>Contents/MacOS/PerchHelper</string>
+	<key>MachServices</key>
+	<dict>
+		<key>org.ahlab.Perch.helper</key>
+		<true/>
+	</dict>
+	<key>AssociatedBundleIdentifiers</key>
+	<array>
+		<string>org.ahlab.Perch</string>
+	</array>
+</dict>
+</plist>

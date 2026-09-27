@@ -12,8 +12,8 @@ packages:
     from: 1.0.0
   PerchKit:
     path: PerchKit
-  MenuDoPlugin:
-    path: Plugins/MenuDoPlugin
+  TasksPlugin:
+    path: Plugins/TasksPlugin
   AnalyticsPlugin:
     path: Plugins/AnalyticsPlugin
   MarketPlugin:
@@ -28,15 +28,22 @@ targets:
     platform: macOS
     sources:
       - Perch
+      - Shared
       - path: Perch/Resources
         buildPhase: resources
     dependencies:
+      - target: PerchKeepAwake
+        embed: true
+        codeSign: false
+        copy:
+          destination: wrapper
+          subpath: Contents/Helpers
       - package: KeyboardShortcuts
       - package: MenuBarExtraAccess
       - package: PerchKit
         product: PerchKit
-      - package: MenuDoPlugin
-        product: MenuDoPlugin
+      - package: TasksPlugin
+        product: TasksPlugin
       - package: AnalyticsPlugin
         product: AnalyticsPlugin
       - package: MarketPlugin
@@ -93,6 +100,87 @@ targets:
         NSHumanReadableCopyright: "© 2026 Prasanth Sasikumar"
     scheme:
       testTargets: [PerchTests]
+  # Registers the root helper, then quits. Perch cannot do this itself: it is
+  # sandboxed, and the sandbox denies job-creation. This app is deliberately
+  # not sandboxed, and owns the helper and its launchd job.
+  PerchKeepAwake:
+    type: application
+    platform: macOS
+    sources:
+      - path: PerchKeepAwake
+      - Shared
+      - path: PerchHelper/org.ahlab.Perch.helper.plist
+        buildPhase:
+          copyFiles:
+            destination: wrapper
+            subpath: Contents/Library/LaunchDaemons
+    dependencies:
+      - target: PerchHelper
+        embed: true
+        codeSign: false
+        copy:
+          destination: executables
+    settings:
+      base:
+        PRODUCT_NAME: PerchKeepAwake
+        PRODUCT_BUNDLE_IDENTIFIER: org.ahlab.Perch.keepawake
+        MARKETING_VERSION: "2.3.1"
+        CURRENT_PROJECT_VERSION: "7"
+        SKIP_INSTALL: YES
+      configs:
+        Debug:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: "Apple Development: Prasanth Sasikumar (5AD8QG2238)"
+          DEVELOPMENT_TEAM: 3U4384584Z
+          PROVISIONING_PROFILE_SPECIFIER: ""
+        Release:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: "Developer ID Application: FLOWXR PTE. LTD. (3U4384584Z)"
+          DEVELOPMENT_TEAM: 3U4384584Z
+          ENABLE_HARDENED_RUNTIME: YES
+          CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+          OTHER_CODE_SIGN_FLAGS: "--timestamp"
+    info:
+      path: PerchKeepAwake/Info.plist
+      properties:
+        LSUIElement: true
+        CFBundleDisplayName: Perch Keep Awake
+        CFBundleShortVersionString: "2.3.1"
+        CFBundleVersion: "7"
+        NSHumanReadableCopyright: "© 2026 Prasanth Sasikumar"
+  # The root helper behind the keep-awake toggle. Registered with
+  # SMAppService.daemon by PerchKeepAwake and run by launchd, never launched directly.
+  PerchHelper:
+    type: tool
+    platform: macOS
+    sources:
+      - path: PerchHelper
+        excludes:
+          - "*.plist"
+      - Shared
+    settings:
+      base:
+        PRODUCT_NAME: PerchHelper
+        PRODUCT_BUNDLE_IDENTIFIER: org.ahlab.Perch.helper
+        SKIP_INSTALL: YES
+        # A command-line tool is signed under its product name unless told
+        # otherwise, and both ends of the XPC connection check this identifier.
+        OTHER_CODE_SIGN_FLAGS: "--identifier org.ahlab.Perch.helper"
+      configs:
+        Debug:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: "Apple Development: Prasanth Sasikumar (5AD8QG2238)"
+          DEVELOPMENT_TEAM: 3U4384584Z
+          PROVISIONING_PROFILE_SPECIFIER: ""
+        # Same rules as the app: notarization rejects get-task-allow and a
+        # signature without a secure timestamp.
+        Release:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: "Developer ID Application: FLOWXR PTE. LTD. (3U4384584Z)"
+          DEVELOPMENT_TEAM: 3U4384584Z
+          ENABLE_HARDENED_RUNTIME: YES
+          CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+          OTHER_CODE_SIGN_FLAGS: "--timestamp --identifier org.ahlab.Perch.helper"
   PerchTests:
     type: bundle.unit-test
     platform: macOS
@@ -119,8 +207,8 @@ targets:
       - target: Perch
       - package: PerchKit
         product: PerchKit
-      - package: MenuDoPlugin
-        product: MenuDoPlugin
+      - package: TasksPlugin
+        product: TasksPlugin
       - package: AnalyticsPlugin
         product: AnalyticsPlugin
       - package: MarketPlugin

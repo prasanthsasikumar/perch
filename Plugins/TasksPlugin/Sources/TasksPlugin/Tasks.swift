@@ -8,8 +8,8 @@ import SwiftUI
 /// Declares no capabilities. Nothing it stores ever leaves the Mac.
 @MainActor
 @Observable
-public final class MenuDo: PerchPlugin {
-    public static let identifier = "org.ahlab.perch.menudo"
+public final class Tasks: PerchPlugin {
+    public static let identifier = "org.ahlab.perch.tasks"
     public static let displayName = "Tasks"
     public static let icon = "checkmark.circle"
     public static let capabilities: Set<PluginCapability> = []

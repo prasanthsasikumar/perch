@@ -17,7 +17,7 @@ public final class TaskStore {
         self.storage = storage
         self.filename = filename
         load()
-        // Belt and braces. The host now calls `MenuDo.flush()` on both quit
+        // Belt and braces. The host now calls `Tasks.flush()` on both quit
         // paths, so this is redundant inside Perch — but it costs nothing and
         // a debounced write is the one thing worth losing sleep over.
         NotificationCenter.default.addObserver(

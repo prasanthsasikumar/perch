@@ -1,4 +1,4 @@
-import MenuDoPlugin
+import TasksPlugin
 @testable import Perch
 import PerchKit
 import XCTest
@@ -15,7 +15,7 @@ final class PluginFlushTests: XCTestCase {
     private var suiteName: String!
     private var context: PluginContext!
 
-    private var tasksURL: URL { directory.appendingPathComponent(MenuDo.tasksFilename) }
+    private var tasksURL: URL { directory.appendingPathComponent(Tasks.tasksFilename) }
 
     override func setUp() {
         super.setUp()
@@ -26,7 +26,7 @@ final class PluginFlushTests: XCTestCase {
         context = PluginContext(
             storage: PluginStorage(directory: directory),
             defaults: PluginDefaults(
-                suite: UserDefaults(suiteName: suiteName)!, prefix: MenuDo.identifier
+                suite: UserDefaults(suiteName: suiteName)!, prefix: Tasks.identifier
             )
         )
     }
@@ -37,12 +37,12 @@ final class PluginFlushTests: XCTestCase {
         super.tearDown()
     }
 
-    private func makeRegistry(_ plugin: MenuDo) -> PluginRegistry {
+    private func makeRegistry(_ plugin: Tasks) -> PluginRegistry {
         PluginRegistry(plugins: [plugin], defaults: UserDefaults(suiteName: suiteName)!)
     }
 
     func testFlushAllPersistsWorkThePluginHadNotWrittenYet() {
-        let plugin = MenuDo(context: context)
+        let plugin = Tasks(context: context)
         let registry = makeRegistry(plugin)
         plugin.store.add("Typed just before quitting")
         // The store debounces, so nothing has reached disk.
@@ -52,42 +52,42 @@ final class PluginFlushTests: XCTestCase {
         registry.flushAll()
 
         XCTAssertEqual(
-            MenuDo(context: context).store.items.map(\.title), ["Typed just before quitting"]
+            Tasks(context: context).store.items.map(\.title), ["Typed just before quitting"]
         )
     }
 
     func testFlushReachesAPluginTheUserHasDisabled() {
         // Disabling hides a plugin; it does not discard what the user typed
         // just before switching it off.
-        let plugin = MenuDo(context: context)
+        let plugin = Tasks(context: context)
         let registry = makeRegistry(plugin)
         plugin.store.add("Typed before switching the plugin off")
-        registry.setEnabled(false, for: MenuDo.identifier)
+        registry.setEnabled(false, for: Tasks.identifier)
 
         registry.flushAll()
 
         XCTAssertEqual(
-            MenuDo(context: context).store.items.map(\.title),
+            Tasks(context: context).store.items.map(\.title),
             ["Typed before switching the plugin off"]
         )
     }
 
     /// The host builds every plugin's context through one helper, so a plugin
     /// and anything else reaching for its storage cannot drift apart.
-    func testHostGivesMenuDoStorageNamespacedByItsIdentifier() {
-        let storage = PluginContext.perch(MenuDo.identifier).storage
+    func testHostGivesTasksStorageNamespacedByItsIdentifier() {
+        let storage = PluginContext.perch(Tasks.identifier).storage
         XCTAssertTrue(
-            storage.directory.path.hasSuffix("Perch/Plugins/\(MenuDo.identifier)"),
+            storage.directory.path.hasSuffix("Perch/Plugins/\(Tasks.identifier)"),
             "unexpected storage directory: \(storage.directory.path)"
         )
     }
 
-    func testMenuDoWritesTheFilenameItDeclares() throws {
-        let plugin = MenuDo(context: context)
+    func testTasksWritesTheFilenameItDeclares() throws {
+        let plugin = Tasks(context: context)
         plugin.store.add("A task")
         plugin.flush()
 
         let written = try FileManager.default.contentsOfDirectory(atPath: directory.path)
-        XCTAssertEqual(written, [MenuDo.tasksFilename])
+        XCTAssertEqual(written, [Tasks.tasksFilename])
     }
 }

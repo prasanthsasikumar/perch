@@ -2,15 +2,15 @@
 import PackageDescription
 
 let package = Package(
-    name: "MenuDoPlugin",
+    name: "TasksPlugin",
     platforms: [.macOS(.v14)],
     products: [
-        .library(name: "MenuDoPlugin", targets: ["MenuDoPlugin"])
+        .library(name: "TasksPlugin", targets: ["TasksPlugin"])
     ],
     dependencies: [
         .package(path: "../../PerchKit")
     ],
     targets: [
-        .target(name: "MenuDoPlugin", dependencies: ["PerchKit"])
+        .target(name: "TasksPlugin", dependencies: ["PerchKit"])
     ]
 )
