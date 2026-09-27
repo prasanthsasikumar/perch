@@ -5,8 +5,9 @@ Small tools that live in your macOS menu bar.
 Perch is a host. The tools themselves are plugins: today there's **Tasks**, a
 todo list with the current task in the menu bar; **Analytics**, which puts your Google Analytics
 numbers a click away; **Market**, which watches Facebook Marketplace searches;
-**Busy**, which shows how busy a place is right now; and **Server**, which
-watches the health of machines you run. More can be added without disturbing
+**Busy**, which shows how busy a place is right now; **Server**, which
+watches the health of machines you run; and **Internet**, which tells you
+whether your connection is actually working. More can be added without disturbing
 what's already there.
 
 <table>
@@ -175,6 +176,30 @@ address, for example `https://status.example.com`.
 Perch keeps its own short history, so a card's sparkline covers only what Perch
 has watched. The agent's own dashboard has the full 24 hours and 30 days; open
 it from a server's ••• menu.
+
+### Internet
+
+Whether the internet is working right now, and how well, without opening a
+browser to find out.
+
+- **A verdict first.** Healthy, Fair, Poor or Offline, with one line saying
+  why, and the menu bar icon changes to match.
+- **Names the likely culprit.** A Wi-Fi login page shows up as *Sign-in
+  needed* and a broken resolver as *DNS isn't working*, rather than both
+  reading as "offline". Cloudflare is probed by IP address and Google and Apple
+  by name, which is what tells those apart.
+- **Latency, jitter and loss.** Taken over the last five minutes of checks, so
+  one dropped probe does not flip the verdict. Latency is timed from request
+  sent to first byte back, so it tracks `ping` rather than counting TLS
+  handshakes.
+- **An hour of history.** A sparkline of latency, with dropped checks marked
+  in red.
+- **Speed test on request.** Downloads 25 MB from Cloudflare and reports
+  megabits per second. It never runs on its own, and the panel says when the
+  network is metered.
+
+Internet declares `network`: while enabled it sends three small HTTPS requests
+every 30 seconds, and checks again straight away when you change networks.
 
 ## Settings
 
