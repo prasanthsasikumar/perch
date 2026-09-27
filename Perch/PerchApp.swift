@@ -20,6 +20,7 @@ extension PluginContext {
 struct PerchApp: App {
     @State private var registry: PluginRegistry
     @State private var appState = AppState()
+    @State private var sleep = SleepController()
     @AppStorage("showTitleInMenuBar") private var showTitleInMenuBar = true
     @AppStorage("titleTruncationLength") private var titleTruncationLength = 30
 
@@ -55,7 +56,7 @@ struct PerchApp: App {
         @Bindable var appState = appState
 
         MenuBarExtra {
-            PanelView(registry: registry)
+            PanelView(registry: registry, sleep: sleep)
         } label: {
             menuBarContent(
                 MenuBarLabelResolver.resolve(
