@@ -11,7 +11,16 @@ struct PluginTabStrip: View {
             set: { registry.activeID = $0 }
         )) {
             ForEach(registry.enabled) { entry in
-                Text(entry.displayName).tag(entry.id)
+                Group {
+                    if registry.tabStripUsesIcons {
+                        Image(systemName: entry.icon)
+                            .accessibilityLabel(entry.displayName)
+                    } else {
+                        Text(entry.displayName)
+                    }
+                }
+                .help(entry.displayName)
+                .tag(entry.id)
             }
         }
         .pickerStyle(.segmented)

@@ -111,6 +111,15 @@ final class PluginRegistry {
     /// own window — no chrome advertising a framework the user didn't ask for.
     var showsTabStrip: Bool { enabled.count > 1 }
 
+    /// Past five, named tabs no longer fit across the 320-point panel and the
+    /// strip clips; each plugin's icon stands in for its name instead. Five or
+    /// fewer keep their names, which are easier to read than icons.
+    var tabStripUsesIcons: Bool { Self.tabsUseIcons(count: enabled.count) }
+
+    static let maxNamedTabs = 5
+
+    static func tabsUseIcons(count: Int) -> Bool { count > maxNamedTabs }
+
     // MARK: - Mutation
 
     func isEnabled(_ id: String) -> Bool { enabledIDs.contains(id) }
