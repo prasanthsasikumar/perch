@@ -11,6 +11,8 @@ private final class FakeReader: SleepStateReading {
 private final class FakeHelper: SleepHelperClient {
     var calls: [Bool] = []
     var error: Error?
+    /// Thrown by the next call only, then forgotten.
+    var errorOnce: Error?
     /// What a successful call does to the system. `nil` leaves it untouched.
     var onSuccess: ((Bool) -> Void)?
     /// Held open until the test resumes it, to keep a call in flight.
@@ -21,6 +23,10 @@ private final class FakeHelper: SleepHelperClient {
         calls.append(disabled)
         if holdsCalls {
             await withCheckedContinuation { gate = $0 }
+        }
+        if let errorOnce {
+            self.errorOnce = nil
+            throw errorOnce
         }
         if let error { throw error }
         onSuccess?(disabled)
@@ -113,6 +119,20 @@ final class SleepControllerTests: XCTestCase {
         XCTAssertEqual(controller.status, .needsApproval)
         XCTAssertFalse(controller.isSleepDisabled)
         XCTAssertEqual(controller.tooltip, "Allow Perch Keep Awake in System Settings → Login Items, then click again")
+    }
+
+    /// The helper exits when idle. A click that lands as it is exiting loses
+    /// its connection; launchd starts a fresh helper for the second attempt.
+    func testAHelperCaughtExitingIsTriedAgain() async {
+        helper.errorOnce = SleepHelperFailure.unreachable("connection interrupted")
+        let controller = makeController()
+
+        await controller.toggle()
+
+        XCTAssertEqual(helper.calls, [true, true])
+        XCTAssertEqual(installer.installs, 0)
+        XCTAssertEqual(controller.status, .ready)
+        XCTAssertTrue(controller.isSleepDisabled)
     }
 
     func testWorksOnTheClickAfterApproval() async {

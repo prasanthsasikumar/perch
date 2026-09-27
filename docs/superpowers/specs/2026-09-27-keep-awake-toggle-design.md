@@ -173,7 +173,8 @@ Left of the gear. `cup.and.saucer` when sleep is normal,
 | helper not registered, or not yet approved | companion runs; `.needsApproval`; button unchanged |
 | user later removes approval | next toggle lands in `.needsApproval` again |
 | registration fails outright | the companion shows an alert with the reason |
-| connection interrupted | treated as unreachable; companion runs, finds the helper enabled, and quits silently |
+| helper caught exiting from idle | the call is tried once more; launchd starts a fresh helper |
+| still unreachable after the second try | companion runs; if the helper is in fact enabled it quits silently |
 | `pmset` exits non-zero | helper replies with its stderr; `.failed` |
 
 An updated Perch needs no re-registration. The launchd job names the helper

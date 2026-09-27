@@ -60,7 +60,7 @@ final class SleepController {
         defer { isBusy = false }
 
         do {
-            try await helper.setSleepDisabled(!isSleepDisabled)
+            try await setSleepDisabled(!isSleepDisabled)
             status = .ready
         } catch SleepHelperFailure.unreachable {
             // The sandbox will not tell Perch whether the helper is
@@ -71,5 +71,17 @@ final class SleepController {
             status = .failed(error.localizedDescription)
         }
         isSleepDisabled = reader.isSleepDisabled()
+    }
+
+    /// The helper exits when idle, and a call that lands as it is exiting
+    /// loses its connection. launchd starts a fresh helper for the next one,
+    /// so one more attempt tells a helper caught exiting from one that is
+    /// not there.
+    private func setSleepDisabled(_ disabled: Bool) async throws {
+        do {
+            try await helper.setSleepDisabled(disabled)
+        } catch SleepHelperFailure.unreachable {
+            try await helper.setSleepDisabled(disabled)
+        }
     }
 }
