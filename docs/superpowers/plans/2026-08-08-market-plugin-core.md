@@ -90,7 +90,7 @@ let package = Package(
 )
 ```
 
-The test target is the one place this package differs from `MenuDoPlugin` and
+The test target is the one place this package differs from `TasksPlugin` and
 `AnalyticsPlugin`. Perch's convention puts every test in the app-hosted
 `PerchTests` target, but that suite does not currently run on this machine —
 see Global Constraints. These tests need no app host, so they live here and
@@ -1771,7 +1771,7 @@ and add the third entry to `makePlugins()`:
 ```swift
     private static func makePlugins() -> [any PerchPlugin] {
         [
-            MenuDo(context: .perch(MenuDo.identifier)),
+            Tasks(context: .perch(Tasks.identifier)),
             Analytics(context: .perch(Analytics.identifier)),
             Market(context: .perch(Market.identifier)),
         ]

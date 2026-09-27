@@ -1,4 +1,4 @@
-# MenuDo — macOS Menu Bar Todo App — Design
+# Tasks — macOS Menu Bar Todo App — Design
 
 **Date:** 2026-07-18
 **Status:** Approved by user (brainstorming session)
@@ -42,8 +42,8 @@ Alternatives considered and rejected:
 ## Structure
 
 ```
-MenuDo.app (single target)
-├── MenuDoApp.swift          — @main; MenuBarExtra (label = current task) + Settings scene
+Tasks.app (single target)
+├── TasksApp.swift          — @main; MenuBarExtra (label = current task) + Settings scene
 ├── Models/
 │   └── Task.swift           — struct Task: id (UUID), title, isDone, sortOrder, createdAt (Codable)
 ├── Store/
@@ -64,7 +64,7 @@ live in `UserDefaults` via `@AppStorage`.
 
 View action → `TaskStore` method → in-memory `[Task]` mutation → SwiftUI
 re-render (menu bar label included) → debounced (~0.5 s) save to
-`Application Support/MenuDo/tasks.json` (inside the sandbox container). Load
+`Application Support/Tasks/tasks.json` (inside the sandbox container). Load
 once at launch. "Current task" = first task with `isDone == false` ordered by
 `sortOrder`.
 
@@ -95,5 +95,5 @@ once at launch. "Current task" = first task with `isDone == false` ordered by
 - App Store Connect: bundle ID, app record, screenshots, description.
 - Privacy label: "Data Not Collected" (no network, no analytics).
 - Requires the user's Apple Developer Program account for signing and upload.
-- The name "MenuDo" is a working title; confirm availability/rename before
+- The name "Tasks" is a working title; confirm availability/rename before
   submission (rename is a find-replace + target rename).

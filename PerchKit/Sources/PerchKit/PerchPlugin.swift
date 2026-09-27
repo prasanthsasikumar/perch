@@ -15,7 +15,7 @@ import SwiftUI
 /// prove the shape is right.
 @MainActor
 public protocol PerchPlugin: AnyObject, Observable {
-    /// Reverse-DNS, e.g. `"org.ahlab.perch.menudo"`. Also names this plugin's
+    /// Reverse-DNS, e.g. `"org.ahlab.perch.tasks"`. Also names this plugin's
     /// storage directory and its `UserDefaults` prefix, so it must be stable
     /// across releases — changing it orphans the user's data.
     static var identifier: String { get }

@@ -12,22 +12,22 @@
 
 ## Global Constraints
 
-- Working directory for all commands: `/Users/prasanthsasikumar/Documents/GitHub/menudo`.
+- Working directory for all commands: `/Users/prasanthsasikumar/Documents/GitHub/tasks`.
 - Minimum deployment target: **macOS 14.0**. `.onKeyPress` and `@Observable` are available; anything newer is not.
 - The model type is named **`TodoItem`** (not `Task` — that collides with Swift Concurrency's `Task`).
 - No new source *files* are created by this plan, so `xcodegen generate` is **not** needed. Only existing files are modified.
-- Tests: `xcodebuild test -project MenuDo.xcodeproj -scheme MenuDo -destination 'platform=macOS'`
+- Tests: `xcodebuild test -project Tasks.xcodeproj -scheme Tasks -destination 'platform=macOS'`
 - `TaskStore` is `@MainActor`; all tests touching it are on `@MainActor` classes.
-- Follow the existing test style: `XCTest`, `@testable import MenuDo`, a per-test temp `fileURL` built in `setUp`.
+- Follow the existing test style: `XCTest`, `@testable import Tasks`, a per-test temp `fileURL` built in `setUp`.
 
 ---
 
 ### Task 1: `TaskStore.rename(_:to:)`
 
 **Files:**
-- Modify: `MenuDo/Store/TaskStore.swift` (add a method in the `// MARK: - Mutations` section, after `delete(_:)` at line 58-61)
-- Test: `MenuDoTests/TaskStoreLogicTests.swift` (append tests before the closing brace)
-- Test: `MenuDoTests/TaskStorePersistenceTests.swift` (append one test before the closing brace)
+- Modify: `Tasks/Store/TaskStore.swift` (add a method in the `// MARK: - Mutations` section, after `delete(_:)` at line 58-61)
+- Test: `TasksTests/TaskStoreLogicTests.swift` (append tests before the closing brace)
+- Test: `TasksTests/TaskStorePersistenceTests.swift` (append one test before the closing brace)
 
 **Interfaces:**
 - Consumes: existing `TaskStore.add(_:)`, `toggle(_:)`, `items`, `pending`, `done`, `scheduleSave()`, `saveNow()`.
@@ -35,7 +35,7 @@
 
 - [ ] **Step 1: Write the failing tests**
 
-Append to `MenuDoTests/TaskStoreLogicTests.swift`, immediately before the final closing brace:
+Append to `TasksTests/TaskStoreLogicTests.swift`, immediately before the final closing brace:
 
 ```swift
     func testRenameUpdatesMatchingTaskOnly() {
@@ -80,7 +80,7 @@ Append to `MenuDoTests/TaskStoreLogicTests.swift`, immediately before the final 
     }
 ```
 
-Append to `MenuDoTests/TaskStorePersistenceTests.swift`, immediately before the final closing brace:
+Append to `TasksTests/TaskStorePersistenceTests.swift`, immediately before the final closing brace:
 
 ```swift
     func testRenameSurvivesSaveAndReload() {
@@ -97,14 +97,14 @@ Append to `MenuDoTests/TaskStorePersistenceTests.swift`, immediately before the 
 - [ ] **Step 2: Run the tests to verify they fail**
 
 ```bash
-xcodebuild test -project MenuDo.xcodeproj -scheme MenuDo -destination 'platform=macOS' -quiet 2>&1 | tail -20
+xcodebuild test -project Tasks.xcodeproj -scheme Tasks -destination 'platform=macOS' -quiet 2>&1 | tail -20
 ```
 
 Expected: compile failure — `value of type 'TaskStore' has no member 'rename'`.
 
 - [ ] **Step 3: Implement `rename`**
 
-In `MenuDo/Store/TaskStore.swift`, add directly after the `delete(_:)` method:
+In `Tasks/Store/TaskStore.swift`, add directly after the `delete(_:)` method:
 
 ```swift
     func rename(_ id: UUID, to title: String) {
@@ -119,7 +119,7 @@ In `MenuDo/Store/TaskStore.swift`, add directly after the `delete(_:)` method:
 - [ ] **Step 4: Run the tests to verify they pass**
 
 ```bash
-xcodebuild test -project MenuDo.xcodeproj -scheme MenuDo -destination 'platform=macOS' -quiet 2>&1 | tail -20
+xcodebuild test -project Tasks.xcodeproj -scheme Tasks -destination 'platform=macOS' -quiet 2>&1 | tail -20
 ```
 
 Expected: all tests pass (40 existing + 6 new = 46).
@@ -127,7 +127,7 @@ Expected: all tests pass (40 existing + 6 new = 46).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add MenuDo/Store/TaskStore.swift MenuDoTests/TaskStoreLogicTests.swift MenuDoTests/TaskStorePersistenceTests.swift
+git add Tasks/Store/TaskStore.swift TasksTests/TaskStoreLogicTests.swift TasksTests/TaskStorePersistenceTests.swift
 git commit -m "feat: add TaskStore.rename for editing task titles"
 ```
 
@@ -140,9 +140,9 @@ Everything in this task has to land together — `TaskRowView` gains a required
 compiles.
 
 **Files:**
-- Modify: `MenuDo/Views/TaskRowView.swift` (whole file rewritten)
-- Modify: `MenuDo/Views/ReorderableTaskList.swift` (add the binding property, pass it to the row, make the drag gesture conditional)
-- Modify: `MenuDo/Views/TaskListView.swift` (own `editingID`, pass it to both row call sites)
+- Modify: `Tasks/Views/TaskRowView.swift` (whole file rewritten)
+- Modify: `Tasks/Views/ReorderableTaskList.swift` (add the binding property, pass it to the row, make the drag gesture conditional)
+- Modify: `Tasks/Views/TaskListView.swift` (own `editingID`, pass it to both row call sites)
 
 **Interfaces:**
 - Consumes: `TaskStore.rename(_:to:)` from Task 1; existing `store.toggle(_:)`, `store.delete(_:)`, `store.pending`, `store.done`.
@@ -150,7 +150,7 @@ compiles.
 
 - [ ] **Step 1: Rewrite `TaskRowView`**
 
-Replace the entire contents of `MenuDo/Views/TaskRowView.swift` with:
+Replace the entire contents of `Tasks/Views/TaskRowView.swift` with:
 
 ```swift
 import SwiftUI
@@ -243,7 +243,7 @@ struct TaskRowView: View {
 
 - [ ] **Step 2: Thread the binding through `ReorderableTaskList`**
 
-In `MenuDo/Views/ReorderableTaskList.swift`, change the stored properties at
+In `Tasks/Views/ReorderableTaskList.swift`, change the stored properties at
 the top of the struct from:
 
 ```swift
@@ -299,7 +299,7 @@ to:
 
 - [ ] **Step 3: Own `editingID` in `TaskListView`**
 
-In `MenuDo/Views/TaskListView.swift`, add a state property alongside the
+In `Tasks/Views/TaskListView.swift`, add a state property alongside the
 existing ones near the top of the struct:
 
 ```swift
@@ -333,7 +333,7 @@ to:
 - [ ] **Step 4: Build and run the test suite**
 
 ```bash
-xcodebuild test -project MenuDo.xcodeproj -scheme MenuDo -destination 'platform=macOS' -quiet 2>&1 | tail -20
+xcodebuild test -project Tasks.xcodeproj -scheme Tasks -destination 'platform=macOS' -quiet 2>&1 | tail -20
 ```
 
 Expected: builds clean, all 46 tests still pass.
@@ -355,8 +355,8 @@ computed property on the struct and pass that instead:
 - [ ] **Step 5: Verify by hand in the running app**
 
 ```bash
-xcodebuild -project MenuDo.xcodeproj -scheme MenuDo -configuration Debug -derivedDataPath build build -quiet 2>&1 | tail -3
-open build/Build/Products/Debug/MenuDo.app
+xcodebuild -project Tasks.xcodeproj -scheme Tasks -configuration Debug -derivedDataPath build build -quiet 2>&1 | tail -3
+open build/Build/Products/Debug/Tasks.app
 ```
 
 Click the menu bar item and check each of these:
@@ -380,7 +380,7 @@ Fix anything that fails before moving on.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add MenuDo/Views/TaskRowView.swift MenuDo/Views/ReorderableTaskList.swift MenuDo/Views/TaskListView.swift
+git add Tasks/Views/TaskRowView.swift Tasks/Views/ReorderableTaskList.swift Tasks/Views/TaskListView.swift
 git commit -m "feat: edit a task title by double-clicking the row"
 ```
 

@@ -258,7 +258,7 @@ xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=ma
 
 ```
 PerchKit/                The public plugin API. Knows nothing about the host.
-Plugins/MenuDoPlugin/    The Tasks plugin (its original name): model, store, views
+Plugins/TasksPlugin/    The Tasks plugin: model, store, views
 Plugins/AnalyticsPlugin/ The Analytics plugin: GA4 client, auth, store, views
 Plugins/MarketPlugin/    The Market plugin: Marketplace scraping, poller, store, views
 Plugins/BusyPlugin/      The Busy plugin: Google popular-times scraping, store, views

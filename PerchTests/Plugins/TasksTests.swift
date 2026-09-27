@@ -1,28 +1,28 @@
-import MenuDoPlugin
+import TasksPlugin
 import PerchKit
 import XCTest
 
 @MainActor
-final class MenuDoTests: XCTestCase {
-    private func makePlugin() -> MenuDo {
+final class TasksTests: XCTestCase {
+    private func makePlugin() -> Tasks {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("PerchTests-\(UUID().uuidString)", isDirectory: true)
-        return MenuDo(
+        return Tasks(
             context: PluginContext(
                 storage: PluginStorage(directory: directory),
                 defaults: PluginDefaults(
                     suite: UserDefaults(suiteName: "PerchTests-\(UUID().uuidString)")!,
-                    prefix: "org.ahlab.perch.menudo"
+                    prefix: "org.ahlab.perch.tasks"
                 )
             )
         )
     }
 
     func testMetadata() {
-        XCTAssertEqual(MenuDo.identifier, "org.ahlab.perch.menudo")
-        XCTAssertEqual(MenuDo.displayName, "Tasks")
-        XCTAssertEqual(MenuDo.icon, "checkmark.circle")
-        XCTAssertTrue(MenuDo.capabilities.isEmpty)
+        XCTAssertEqual(Tasks.identifier, "org.ahlab.perch.tasks")
+        XCTAssertEqual(Tasks.displayName, "Tasks")
+        XCTAssertEqual(Tasks.icon, "checkmark.circle")
+        XCTAssertTrue(Tasks.capabilities.isEmpty)
     }
 
     func testMenuBarLabelIsIconOnlyWithNoTasks() {

@@ -3,17 +3,17 @@
 **Date:** 2026-07-28
 **Status:** Approved by user (brainstorming session), then built.
 
-> **Superseded in part.** The MenuDo migration described below was built, shipped,
+> **Superseded in part.** The Tasks migration described below was built, shipped,
 > and then deliberately removed once the maintainer's own data had moved across —
 > along with its sandbox entitlement, its Settings pane, and the `reload()` hook
-> that existed only to serve it. Perch no longer imports anything from MenuDo;
+> that existed only to serve it. Perch no longer imports anything from Tasks;
 > the README documents the manual copy for anyone who still needs it. Everything
 > else here still describes the shipped code, including `flush()`, which stays
 > because the quit path genuinely needs it.
 
 ## Goal
 
-Turn MenuDo from a single-purpose todo app into **Perch**, a macOS menu bar host
+Turn Tasks from a single-purpose todo app into **Perch**, a macOS menu bar host
 that runs small tools as plugins. The existing todo list becomes the first
 plugin. A Google Analytics plugin — showing website visits in the menu bar — is
 the second, and is deliberately **out of scope for this spec**; it is what will
@@ -27,7 +27,7 @@ In scope:
 - `PerchKit`: a public, versioned plugin protocol in its own Swift package.
 - A host app that registers plugins, owns the menu bar item, renders the panel
   with a tab strip, and hosts a multi-pane Settings window.
-- Migrate today's MenuDo code into `MenuDoPlugin` with no behaviour change.
+- Migrate today's Tasks code into `TasksPlugin` with no behaviour change.
 - A one-time importer that carries existing users' tasks and preferences across
   the bundle-identifier change.
 - Per-plugin capability disclosure in Settings.
@@ -39,7 +39,7 @@ Out of scope:
   later without changing the plugin-facing API, but nothing loads at runtime now.
 - Keychain/credential helpers, background refresh scheduling, inter-plugin
   messaging. These get designed when a plugin actually needs them.
-- A standalone MenuDo app. MenuDo ships only as a Perch plugin from now on.
+- A standalone Tasks app. Tasks ships only as a Perch plugin from now on.
 - App Store distribution. Still ad-hoc signed, as today.
 
 ## Decisions taken during brainstorming
@@ -48,12 +48,12 @@ Out of scope:
 |---|---|
 | What is a plugin, technically? | A compile-time Swift package conforming to a `PerchKit` protocol. |
 | Menu bar presence | One host icon; the panel switches between plugins via a segmented tab strip. |
-| Menu bar label | A user-designated **primary** plugin owns it. Defaults to MenuDo. |
+| Menu bar label | A user-designated **primary** plugin owns it. Defaults to Tasks. |
 | Public plugin API? | Yes, that is the goal. `PerchKit` is the public contract, unstable until 1.0. |
 | Privacy story | Each plugin declares capabilities; Settings discloses them per plugin. |
 | Repo strategy | Rename in place, keep history, migrate user data. |
-| MenuDo's future | Plugin only. No standalone build. |
-| Tab label | "Tasks". Package name stays `MenuDoPlugin`. |
+| Tasks's future | Plugin only. No standalone build. |
+| Tab label | "Tasks". Package name stays `TasksPlugin`. |
 
 ## Architecture
 
@@ -69,8 +69,8 @@ PerchKit/                   Swift package — the public plugin API. No host int
   PluginAction.swift
 
 Plugins/
-  MenuDoPlugin/             depends on PerchKit
-    MenuDoPlugin.swift      the entry point / manifest
+  TasksPlugin/             depends on PerchKit
+    TasksPlugin.swift      the entry point / manifest
     Models/TodoItem.swift
     Store/TaskStore.swift
     Views/TaskListView.swift, TaskRowView.swift, ReorderableTaskList.swift
@@ -96,7 +96,7 @@ Plugins are local Swift packages referenced by path from `project.yml`, so
 ```swift
 @MainActor
 public protocol PerchPlugin: AnyObject, Observable {
-    static var identifier: String { get }        // "org.ahlab.perch.menudo"
+    static var identifier: String { get }        // "org.ahlab.perch.tasks"
     static var displayName: String { get }       // tab label
     static var icon: String { get }              // SF Symbol
     static var capabilities: Set<PluginCapability> { get }
@@ -122,7 +122,7 @@ because the host cannot honestly do without them:
   that plugin is already running and holding the empty list it loaded at launch.
   Without a way to say so, the plugin's next save destroys the import.
 - `flush()` — the panel's Quit button claimed to give every plugin a chance to
-  flush. MenuDo only survived because `TaskStore` privately subscribed to
+  flush. Tasks only survived because `TaskStore` privately subscribed to
   `NSApplication.willTerminateNotification`; a second plugin author would not
   have known to, and would have lost their users' debounced writes.
 
@@ -135,7 +135,7 @@ keeps control of menu bar layout and truncation; a plugin cannot smuggle
 arbitrary UI into the menu bar.
 
 `PluginAction` is a title plus a closure, rendered by the host in the footer's
-left region. MenuDo contributes "Clear completed".
+left region. Tasks contributes "Clear completed".
 
 ### PluginContext
 
@@ -158,8 +158,8 @@ public enum PluginCapability: String, Sendable {
 }
 ```
 
-MenuDo declares an empty set. This is what lets the Plugins settings pane state
-"Stays entirely on your Mac" for MenuDo and something honest and different for
+Tasks declares an empty set. This is what lets the Plugins settings pane state
+"Stays entirely on your Mac" for Tasks and something honest and different for
 Analytics later. The disclosure is generated from the declaration, not
 hand-maintained prose.
 
@@ -174,11 +174,11 @@ each plugin *does*, not what the sandbox *enforces*.
 
 A single `MenuBarExtra`. Its label asks the primary plugin for `menuBarLabel`,
 then applies the existing truncation settings. `showTitleInMenuBar` and
-`titleTruncationLength` become host settings — they were never MenuDo-specific.
+`titleTruncationLength` become host settings — they were never Tasks-specific.
 
 Resolution order: primary plugin's label → if the primary is disabled or returns
 `nil`, the Perch icon alone (SF Symbol `bird`, verified against macOS 14 at
-build time; fall back to a bundled asset if unavailable). MenuDo continues to
+build time; fall back to a bundled asset if unavailable). Tasks continues to
 contribute `checkmark.circle`, so the bar looks unchanged for existing users.
 
 ### Panel
@@ -190,7 +190,7 @@ PanelView
 └── PanelFooter         host — activePlugin.footerActions on the left, gear and quit on the right
 ```
 
-Width stays 320pt. **With only MenuDo enabled the panel is structurally
+Width stays 320pt. **With only Tasks enabled the panel is structurally
 identical to today's** — no tab strip, same footer. This is the acceptance
 criterion for the whole migration.
 
@@ -209,20 +209,20 @@ A sidebar window, since one `Form` no longer suffices:
   primary-plugin picker.
 - **Plugins** — enable/disable each plugin, and its capability disclosure.
 - **Per-plugin panes** — renders `plugin.settings` for each enabled plugin. A
-  plugin with nothing to configure gets no pane. MenuDo has none today.
+  plugin with nothing to configure gets no pane. Tasks has none today.
 
 ## Migration
 
 ### Identity changes
 
-- Bundle identifier `org.ahlab.MenuDo` → `org.ahlab.Perch`
-- Product `MenuDo.app` → `Perch.app`
+- Bundle identifier `org.ahlab.Tasks` → `org.ahlab.Perch`
+- Product `Tasks.app` → `Perch.app`
 - `MARKETING_VERSION` → `2.0` (new app identity)
 - `PerchKit` starts at `0.1.0`, explicitly unstable. The semver promise begins at
   1.0, once the Analytics plugin has proven the protocol shape is right.
   Freezing a public API before a second implementation exists freezes the wrong
   shape.
-- App icon regenerated. `scripts/make_icon.swift` currently draws MenuDo's blue
+- App icon regenerated. `scripts/make_icon.swift` currently draws Tasks's blue
   checkmark and must be replaced with a Perch mark.
 - Repo renamed to `perch`. GitHub redirects old clone URLs; history, stars, and
   releases survive.
@@ -233,8 +233,8 @@ The app is sandboxed with only `com.apple.security.app-sandbox`. Changing the
 bundle identifier moves the container:
 
 ```
-old:  ~/Library/Containers/org.ahlab.MenuDo/Data/…/Application Support/MenuDo/tasks.json
-new:  ~/Library/Containers/org.ahlab.Perch/Data/…/Application Support/Perch/Plugins/org.ahlab.perch.menudo/tasks.json
+old:  ~/Library/Containers/org.ahlab.Tasks/Data/…/Application Support/Tasks/tasks.json
+new:  ~/Library/Containers/org.ahlab.Perch/Data/…/Application Support/Perch/Plugins/org.ahlab.perch.tasks/tasks.json
 ```
 
 **A sandboxed app cannot read another app's container.** Copying the file on
@@ -245,7 +245,7 @@ truncation length, and the menu bar display setting also reset. The importer
 must read the old preferences plist alongside `tasks.json`:
 
 ```
-~/Library/Containers/org.ahlab.MenuDo/Data/Library/Preferences/org.ahlab.MenuDo.plist
+~/Library/Containers/org.ahlab.Tasks/Data/Library/Preferences/org.ahlab.Tasks.plist
 ```
 
 ### Two-tier importer
@@ -260,7 +260,7 @@ must read the old preferences plist alongside `tasks.json`:
 2. **Manual fallback.** If the entitlement does not in fact grant access — this
    must be verified empirically during implementation, not assumed; Apple has
    tightened temporary exceptions against other apps' containers over time — the
-   first-run notice offers **"Import from MenuDo…"**, opening an `NSOpenPanel` at
+   first-run notice offers **"Import from Tasks…"**, opening an `NSOpenPanel` at
    the old path. The user selecting the file is the consent that grants access,
    with no entitlement required.
 
@@ -296,9 +296,9 @@ glossed over:
 
 ### Stale login item
 
-If launch-at-login was enabled, macOS has `org.ahlab.MenuDo` registered, and
+If launch-at-login was enabled, macOS has `org.ahlab.Tasks` registered, and
 Perch cannot unregister another app's login item. The first-run notice therefore
-reads: *"Your tasks are here. You can move MenuDo.app to the Trash."* Once the
+reads: *"Your tasks are here. You can move Tasks.app to the Trash."* Once the
 old app is deleted the registration lapses. The release notes must say this too,
 or a user ends up running both apps.
 
@@ -306,7 +306,7 @@ or a user ends up running both apps.
 
 Tests that move unchanged:
 
-- `TodoItemTests`, `TaskStoreLogicTests`, `DragReorderTests` → `MenuDoPlugin`
+- `TodoItemTests`, `TaskStoreLogicTests`, `DragReorderTests` → `TasksPlugin`
 - `StringTruncationTests` → host (truncation is now a menu bar concern)
 - `SmokeTests` → host
 
@@ -324,7 +324,7 @@ New coverage:
 - `LegacyImporter` — idempotence, non-destructive copy, refusal when the target
   has data, tested against temp directories rather than real containers.
 
-The acceptance test, written first: **with only MenuDo enabled, the panel has no
+The acceptance test, written first: **with only Tasks enabled, the panel has no
 tab strip and is structurally identical to today's.**
 
 ## Risks
@@ -332,7 +332,7 @@ tab strip and is structurally identical to today's.**
 | Risk | Mitigation |
 |---|---|
 | Temporary-exception entitlement may not grant access to another app's container | Tier-2 `NSOpenPanel` fallback always works; verify tier 1 empirically before relying on it |
-| Users end up running both MenuDo and Perch | First-run notice and release notes tell them to trash the old app |
+| Users end up running both Tasks and Perch | First-run notice and release notes tell them to trash the old app |
 | Public API frozen in the wrong shape | `PerchKit` stays 0.x and explicitly unstable until the Analytics plugin validates it |
 | The README's "no network access" claim weakens | Per-plugin capability disclosure, with the per-app entitlement limitation stated honestly rather than glossed |
 

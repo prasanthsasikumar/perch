@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Turn MenuDo into Perch, a macOS menu bar host that runs small tools as compile-time plugins, with today's todo list as the first plugin and no change to how it behaves.
+**Goal:** Turn Tasks into Perch, a macOS menu bar host that runs small tools as compile-time plugins, with today's todo list as the first plugin and no change to how it behaves.
 
-**Architecture:** Three layers. `PerchKit` is a local Swift package holding the public plugin protocol and its support types — it knows nothing about the host. `Plugins/MenuDoPlugin` is a local Swift package depending only on `PerchKit`. `Perch` is the app target: it is the only place that names concrete plugins, and it owns the menu bar item, the panel chrome (tab strip + footer), the Settings window, and the one-time import of data from the old MenuDo bundle identifier.
+**Architecture:** Three layers. `PerchKit` is a local Swift package holding the public plugin protocol and its support types — it knows nothing about the host. `Plugins/TasksPlugin` is a local Swift package depending only on `PerchKit`. `Perch` is the app target: it is the only place that names concrete plugins, and it owns the menu bar item, the panel chrome (tab strip + footer), the Settings window, and the one-time import of data from the old Tasks bundle identifier.
 
 **Tech Stack:** Swift 5.9+, SwiftUI (`MenuBarExtra`, `.window` style), XcodeGen, XCTest, `SMAppService`, plus the two existing SPM dependencies (KeyboardShortcuts, MenuBarExtraAccess).
 
@@ -19,8 +19,8 @@
 - `MARKETING_VERSION: "2.0"`, `CURRENT_PROJECT_VERSION: "2"`.
 - `PerchKit` version is `0.1.0` and explicitly unstable. Do not document it as a stable API.
 - Copyright string stays `© 2026 Prasanth Sasikumar`.
-- Plugin identifiers are reverse-DNS: MenuDo's is `org.ahlab.perch.menudo`.
-- Test symbols in packages are reached with plain `import`, not `@testable` — anything a test touches in `PerchKit` or `MenuDoPlugin` must be `public`. Only the app module is imported with `@testable`.
+- Plugin identifiers are reverse-DNS: Tasks's is `org.ahlab.perch.tasks`.
+- Test symbols in packages are reached with plain `import`, not `@testable` — anything a test touches in `PerchKit` or `TasksPlugin` must be `public`. Only the app module is imported with `@testable`.
 - Standard build/test command:
   `xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=macOS' 2>&1 | tail -30`
 - Regenerate the Xcode project after any `project.yml` change: `xcodegen generate`
@@ -34,22 +34,22 @@ Purely mechanical. Nothing about the todo list changes; only names, identifiers,
 
 **Files:**
 - Modify: `project.yml` (full rewrite)
-- Rename: `MenuDo/` → `Perch/`
-- Rename: `MenuDo/MenuDoApp.swift` → `Perch/PerchApp.swift`
-- Rename: `MenuDo/MenuDo.entitlements` → `Perch/Perch.entitlements`
-- Rename: `MenuDoTests/` → `PerchTests/`
+- Rename: `Tasks/` → `Perch/`
+- Rename: `Tasks/TasksApp.swift` → `Perch/PerchApp.swift`
+- Rename: `Tasks/Tasks.entitlements` → `Perch/Perch.entitlements`
+- Rename: `TasksTests/` → `PerchTests/`
 - Modify: `Perch/Info.plist`, `Perch/Support/AppState.swift`, `Perch/Views/SettingsView.swift`, `Perch/Views/TaskListView.swift`
 - Modify: `.gitignore`
 
 - [ ] **Step 1: Move the directories with git**
 
 ```bash
-cd /Users/prasanthsasikumar/Documents/GitHub/menudo
-git mv MenuDo Perch
-git mv Perch/MenuDoApp.swift Perch/PerchApp.swift
-git mv Perch/MenuDo.entitlements Perch/Perch.entitlements
-git mv MenuDoTests PerchTests
-rm -rf MenuDo.xcodeproj
+cd /Users/prasanthsasikumar/Documents/GitHub/tasks
+git mv Tasks Perch
+git mv Perch/TasksApp.swift Perch/PerchApp.swift
+git mv Perch/Tasks.entitlements Perch/Perch.entitlements
+git mv TasksTests PerchTests
+rm -rf Tasks.xcodeproj
 ```
 
 - [ ] **Step 2: Rewrite `project.yml`**
@@ -124,7 +124,7 @@ Expected: `Perch`, `2.0`, and `2`.
 
 - [ ] **Step 4: Rename the app struct**
 
-In `Perch/PerchApp.swift`, rename `MenuDoApp` to `PerchApp`:
+In `Perch/PerchApp.swift`, rename `TasksApp` to `PerchApp`:
 
 ```swift
 @main
@@ -177,7 +177,7 @@ In `Perch/Views/TaskListView.swift`, the two quit-button strings:
 
 - [ ] **Step 7: Update the storage directory name**
 
-In `Perch/Store/TaskStore.swift`, `defaultFileURL` still says `"MenuDo"`. Change to `"Perch"`:
+In `Perch/Store/TaskStore.swift`, `defaultFileURL` still says `"Tasks"`. Change to `"Perch"`:
 
 ```swift
     nonisolated static var defaultFileURL: URL {
@@ -189,7 +189,7 @@ In `Perch/Store/TaskStore.swift`, `defaultFileURL` still says `"MenuDo"`. Change
 
 - [ ] **Step 8: Update test imports**
 
-In every file under `PerchTests/`, replace `@testable import MenuDo` with `@testable import Perch`. Files affected: `DragReorderTests.swift`, `StringTruncationTests.swift`, `TaskStoreLogicTests.swift`, `TaskStorePersistenceTests.swift`, `TodoItemTests.swift`.
+In every file under `PerchTests/`, replace `@testable import Tasks` with `@testable import Perch`. Files affected: `DragReorderTests.swift`, `StringTruncationTests.swift`, `TaskStoreLogicTests.swift`, `TaskStorePersistenceTests.swift`, `TodoItemTests.swift`.
 
 Also delete `PerchTests/SmokeTests.swift` entirely — its single test asserts `XCTAssertTrue(true)`, which proved the harness ran back when there was nothing else to run. With 46 real tests it earns nothing:
 
@@ -227,7 +227,7 @@ Record the test count this run reports — later tasks refer to "the existing te
 
 ```bash
 git add -A
-git commit -m "refactor: rename MenuDo to Perch"
+git commit -m "refactor: rename Tasks to Perch"
 ```
 
 ---
@@ -891,7 +891,7 @@ import SwiftUI
 /// prove the shape is right.
 @MainActor
 public protocol PerchPlugin: AnyObject, Observable {
-    /// Reverse-DNS, e.g. `"org.ahlab.perch.menudo"`. Also names this plugin's
+    /// Reverse-DNS, e.g. `"org.ahlab.perch.tasks"`. Also names this plugin's
     /// storage directory and its `UserDefaults` prefix, so it must be stable
     /// across releases — changing it orphans the user's data.
     static var identifier: String { get }
@@ -947,13 +947,13 @@ git commit -m "feat: add the PerchPlugin protocol and plugin context"
 
 ---
 
-### Task 5: Move the todo model and logic into MenuDoPlugin
+### Task 5: Move the todo model and logic into TasksPlugin
 
 **Files:**
-- Create: `Plugins/MenuDoPlugin/Package.swift`
-- Create: `Plugins/MenuDoPlugin/Sources/MenuDoPlugin/Models/TodoItem.swift` (moved)
-- Create: `Plugins/MenuDoPlugin/Sources/MenuDoPlugin/Store/TaskStore.swift` (moved, rewired)
-- Create: `Plugins/MenuDoPlugin/Sources/MenuDoPlugin/Support/DragReorder.swift` (moved)
+- Create: `Plugins/TasksPlugin/Package.swift`
+- Create: `Plugins/TasksPlugin/Sources/TasksPlugin/Models/TodoItem.swift` (moved)
+- Create: `Plugins/TasksPlugin/Sources/TasksPlugin/Store/TaskStore.swift` (moved, rewired)
+- Create: `Plugins/TasksPlugin/Sources/TasksPlugin/Support/DragReorder.swift` (moved)
 - Delete: `Perch/Models/`, `Perch/Store/`, `Perch/Support/DragReorder.swift`
 - Modify: `Perch/PerchApp.swift`, `Perch/Views/TaskListView.swift`, `Perch/Views/TaskRowView.swift`, `Perch/Views/ReorderableTaskList.swift` (add imports)
 - Modify: `PerchTests/TodoItemTests.swift`, `PerchTests/DragReorderTests.swift`, `PerchTests/TaskStoreLogicTests.swift`, `PerchTests/TaskStorePersistenceTests.swift`
@@ -965,23 +965,23 @@ git commit -m "feat: add the PerchPlugin protocol and plugin context"
 
 - [ ] **Step 1: Create the package manifest**
 
-`Plugins/MenuDoPlugin/Package.swift`:
+`Plugins/TasksPlugin/Package.swift`:
 
 ```swift
 // swift-tools-version: 5.9
 import PackageDescription
 
 let package = Package(
-    name: "MenuDoPlugin",
+    name: "TasksPlugin",
     platforms: [.macOS(.v14)],
     products: [
-        .library(name: "MenuDoPlugin", targets: ["MenuDoPlugin"])
+        .library(name: "TasksPlugin", targets: ["TasksPlugin"])
     ],
     dependencies: [
         .package(path: "../../PerchKit")
     ],
     targets: [
-        .target(name: "MenuDoPlugin", dependencies: ["PerchKit"])
+        .target(name: "TasksPlugin", dependencies: ["PerchKit"])
     ]
 )
 ```
@@ -991,30 +991,30 @@ let package = Package(
 In `project.yml` add to `packages`:
 
 ```yaml
-  MenuDoPlugin:
-    path: Plugins/MenuDoPlugin
+  TasksPlugin:
+    path: Plugins/TasksPlugin
 ```
 
 and to both `targets.Perch.dependencies` and `targets.PerchTests.dependencies`:
 
 ```yaml
-      - package: MenuDoPlugin
-        product: MenuDoPlugin
+      - package: TasksPlugin
+        product: TasksPlugin
 ```
 
 - [ ] **Step 3: Move the three files**
 
 ```bash
-mkdir -p Plugins/MenuDoPlugin/Sources/MenuDoPlugin/{Models,Store,Support}
-git mv Perch/Models/TodoItem.swift Plugins/MenuDoPlugin/Sources/MenuDoPlugin/Models/TodoItem.swift
-git mv Perch/Store/TaskStore.swift Plugins/MenuDoPlugin/Sources/MenuDoPlugin/Store/TaskStore.swift
-git mv Perch/Support/DragReorder.swift Plugins/MenuDoPlugin/Sources/MenuDoPlugin/Support/DragReorder.swift
+mkdir -p Plugins/TasksPlugin/Sources/TasksPlugin/{Models,Store,Support}
+git mv Perch/Models/TodoItem.swift Plugins/TasksPlugin/Sources/TasksPlugin/Models/TodoItem.swift
+git mv Perch/Store/TaskStore.swift Plugins/TasksPlugin/Sources/TasksPlugin/Store/TaskStore.swift
+git mv Perch/Support/DragReorder.swift Plugins/TasksPlugin/Sources/TasksPlugin/Support/DragReorder.swift
 rmdir Perch/Models Perch/Store
 ```
 
 - [ ] **Step 4: Make TodoItem public**
 
-Replace the whole of `Plugins/MenuDoPlugin/Sources/MenuDoPlugin/Models/TodoItem.swift`:
+Replace the whole of `Plugins/TasksPlugin/Sources/TasksPlugin/Models/TodoItem.swift`:
 
 ```swift
 import Foundation
@@ -1044,7 +1044,7 @@ public struct TodoItem: Identifiable, Codable, Equatable {
 
 - [ ] **Step 5: Make DragReorder public**
 
-In `Plugins/MenuDoPlugin/Sources/MenuDoPlugin/Support/DragReorder.swift`, change the enum and its three methods to `public`. Keep every doc comment exactly as it is.
+In `Plugins/TasksPlugin/Sources/TasksPlugin/Support/DragReorder.swift`, change the enum and its three methods to `public`. Keep every doc comment exactly as it is.
 
 ```swift
 public enum DragReorder {
@@ -1061,7 +1061,7 @@ public enum DragReorder {
 
 - [ ] **Step 6: Rewire TaskStore onto PluginStorage and make it public**
 
-Replace the top of `Plugins/MenuDoPlugin/Sources/MenuDoPlugin/Store/TaskStore.swift` down to the end of `init`, and the whole `// MARK: - Persistence` section. Every mutation method and derived property gains `public`; their bodies are unchanged.
+Replace the top of `Plugins/TasksPlugin/Sources/TasksPlugin/Store/TaskStore.swift` down to the end of `init`, and the whole `// MARK: - Persistence` section. Every mutation method and derived property gains `public`; their bodies are unchanged.
 
 ```swift
 import AppKit
@@ -1130,14 +1130,14 @@ Persistence section, replacing `saveNow()` and `load()` entirely:
 
 - [ ] **Step 7: Update the app and views to import the package**
 
-Add `import MenuDoPlugin` to the top of each of: `Perch/PerchApp.swift`, `Perch/Views/TaskListView.swift`, `Perch/Views/TaskRowView.swift`, `Perch/Views/ReorderableTaskList.swift`.
+Add `import TasksPlugin` to the top of each of: `Perch/PerchApp.swift`, `Perch/Views/TaskListView.swift`, `Perch/Views/TaskRowView.swift`, `Perch/Views/ReorderableTaskList.swift`.
 
 In `Perch/PerchApp.swift`, `TaskStore()` no longer compiles. Replace the store property:
 
 ```swift
     @State private var store = TaskStore(
         storage: PluginContext.standard(
-            appName: "Perch", identifier: "org.ahlab.perch.menudo"
+            appName: "Perch", identifier: "org.ahlab.perch.tasks"
         ).storage
     )
 ```
@@ -1149,13 +1149,13 @@ and add `import PerchKit` to that file.
 In `PerchTests/TodoItemTests.swift` and `PerchTests/DragReorderTests.swift`, replace `@testable import Perch` with:
 
 ```swift
-import MenuDoPlugin
+import TasksPlugin
 ```
 
 In `PerchTests/TaskStoreLogicTests.swift`, replace the import and `setUp`:
 
 ```swift
-import MenuDoPlugin
+import TasksPlugin
 import PerchKit
 import XCTest
 
@@ -1176,7 +1176,7 @@ final class TaskStoreLogicTests: XCTestCase {
 In `PerchTests/TaskStorePersistenceTests.swift`, replace the import and `setUp`, and change every `TaskStore(fileURL: fileURL)` to `TaskStore(storage: storage)`:
 
 ```swift
-import MenuDoPlugin
+import TasksPlugin
 import PerchKit
 import XCTest
 
@@ -1209,17 +1209,17 @@ Expected: PASS — no change in count from Task 4; these tests moved rather than
 
 ```bash
 git add -A
-git commit -m "refactor: move the todo model and store into the MenuDoPlugin package"
+git commit -m "refactor: move the todo model and store into the TasksPlugin package"
 ```
 
 ---
 
-### Task 6: Move the todo views into MenuDoPlugin
+### Task 6: Move the todo views into TasksPlugin
 
 **Files:**
-- Create: `Plugins/MenuDoPlugin/Sources/MenuDoPlugin/Views/TaskListView.swift` (moved)
-- Create: `Plugins/MenuDoPlugin/Sources/MenuDoPlugin/Views/TaskRowView.swift` (moved)
-- Create: `Plugins/MenuDoPlugin/Sources/MenuDoPlugin/Views/ReorderableTaskList.swift` (moved)
+- Create: `Plugins/TasksPlugin/Sources/TasksPlugin/Views/TaskListView.swift` (moved)
+- Create: `Plugins/TasksPlugin/Sources/TasksPlugin/Views/TaskRowView.swift` (moved)
+- Create: `Plugins/TasksPlugin/Sources/TasksPlugin/Views/ReorderableTaskList.swift` (moved)
 - Modify: `Perch/PerchApp.swift`
 
 **Interfaces:**
@@ -1230,19 +1230,19 @@ Note the footer is deliberately **left in place** in this task — it moves to t
 - [ ] **Step 1: Move the three view files**
 
 ```bash
-mkdir -p Plugins/MenuDoPlugin/Sources/MenuDoPlugin/Views
-git mv Perch/Views/TaskListView.swift Plugins/MenuDoPlugin/Sources/MenuDoPlugin/Views/TaskListView.swift
-git mv Perch/Views/TaskRowView.swift Plugins/MenuDoPlugin/Sources/MenuDoPlugin/Views/TaskRowView.swift
-git mv Perch/Views/ReorderableTaskList.swift Plugins/MenuDoPlugin/Sources/MenuDoPlugin/Views/ReorderableTaskList.swift
+mkdir -p Plugins/TasksPlugin/Sources/TasksPlugin/Views
+git mv Perch/Views/TaskListView.swift Plugins/TasksPlugin/Sources/TasksPlugin/Views/TaskListView.swift
+git mv Perch/Views/TaskRowView.swift Plugins/TasksPlugin/Sources/TasksPlugin/Views/TaskRowView.swift
+git mv Perch/Views/ReorderableTaskList.swift Plugins/TasksPlugin/Sources/TasksPlugin/Views/ReorderableTaskList.swift
 ```
 
 - [ ] **Step 2: Drop the now-redundant imports**
 
-All three files were given `import MenuDoPlugin` in Task 5; inside the package that is a self-import. Remove that line from each of the three moved files.
+All three files were given `import TasksPlugin` in Task 5; inside the package that is a self-import. Remove that line from each of the three moved files.
 
 - [ ] **Step 3: Make TaskListView public**
 
-In `Plugins/MenuDoPlugin/Sources/MenuDoPlugin/Views/TaskListView.swift`:
+In `Plugins/TasksPlugin/Sources/TasksPlugin/Views/TaskListView.swift`:
 
 ```swift
 public struct TaskListView: View {
@@ -1276,53 +1276,53 @@ Expected: PASS — same count as Task 5. `Perch/Views/` now contains only `Setti
 
 ```bash
 git add -A
-git commit -m "refactor: move the todo views into the MenuDoPlugin package"
+git commit -m "refactor: move the todo views into the TasksPlugin package"
 ```
 
 ---
 
-### Task 7: The MenuDo plugin conformance
+### Task 7: The Tasks plugin conformance
 
 **Files:**
-- Create: `Plugins/MenuDoPlugin/Sources/MenuDoPlugin/MenuDo.swift`
-- Create: `PerchTests/Plugins/MenuDoTests.swift`
+- Create: `Plugins/TasksPlugin/Sources/TasksPlugin/Tasks.swift`
+- Create: `PerchTests/Plugins/TasksTests.swift`
 
 **Interfaces:**
 - Consumes: `PerchPlugin`, `PluginContext`, `MenuBarLabel`, `PluginAction` from Tasks 3–4; `TaskStore`, `TaskListView` from Tasks 5–6.
-- Produces: `MenuDo` — a `PerchPlugin` with `identifier == "org.ahlab.perch.menudo"`, `displayName == "Tasks"`, `icon == "checkmark.circle"`, empty `capabilities`, and a public `store: TaskStore`.
+- Produces: `Tasks` — a `PerchPlugin` with `identifier == "org.ahlab.perch.tasks"`, `displayName == "Tasks"`, `icon == "checkmark.circle"`, empty `capabilities`, and a public `store: TaskStore`.
 
-The type is named `MenuDo` rather than `MenuDoPlugin` because the module is already called `MenuDoPlugin` and a type of the same name shadows it awkwardly at call sites.
+The type is named `Tasks` rather than `TasksPlugin` because the module is already called `TasksPlugin` and a type of the same name shadows it awkwardly at call sites.
 
 - [ ] **Step 1: Write the failing test**
 
-`PerchTests/Plugins/MenuDoTests.swift`:
+`PerchTests/Plugins/TasksTests.swift`:
 
 ```swift
-import MenuDoPlugin
+import TasksPlugin
 import PerchKit
 import XCTest
 
 @MainActor
-final class MenuDoTests: XCTestCase {
-    private func makePlugin() -> MenuDo {
+final class TasksTests: XCTestCase {
+    private func makePlugin() -> Tasks {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("PerchTests-\(UUID().uuidString)", isDirectory: true)
-        return MenuDo(
+        return Tasks(
             context: PluginContext(
                 storage: PluginStorage(directory: directory),
                 defaults: PluginDefaults(
                     suite: UserDefaults(suiteName: "PerchTests-\(UUID().uuidString)")!,
-                    prefix: "org.ahlab.perch.menudo"
+                    prefix: "org.ahlab.perch.tasks"
                 )
             )
         )
     }
 
     func testMetadata() {
-        XCTAssertEqual(MenuDo.identifier, "org.ahlab.perch.menudo")
-        XCTAssertEqual(MenuDo.displayName, "Tasks")
-        XCTAssertEqual(MenuDo.icon, "checkmark.circle")
-        XCTAssertTrue(MenuDo.capabilities.isEmpty)
+        XCTAssertEqual(Tasks.identifier, "org.ahlab.perch.tasks")
+        XCTAssertEqual(Tasks.displayName, "Tasks")
+        XCTAssertEqual(Tasks.icon, "checkmark.circle")
+        XCTAssertTrue(Tasks.capabilities.isEmpty)
     }
 
     func testMenuBarLabelIsIconOnlyWithNoTasks() {
@@ -1368,14 +1368,14 @@ final class MenuDoTests: XCTestCase {
 
 ```bash
 xcodegen generate
-xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=macOS' -only-testing:PerchTests/MenuDoTests 2>&1 | tail -20
+xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=macOS' -only-testing:PerchTests/TasksTests 2>&1 | tail -20
 ```
 
-Expected: FAIL — `cannot find 'MenuDo' in scope`.
+Expected: FAIL — `cannot find 'Tasks' in scope`.
 
 - [ ] **Step 3: Implement the plugin**
 
-`Plugins/MenuDoPlugin/Sources/MenuDoPlugin/MenuDo.swift`:
+`Plugins/TasksPlugin/Sources/TasksPlugin/Tasks.swift`:
 
 ```swift
 import Observation
@@ -1388,8 +1388,8 @@ import SwiftUI
 /// Declares no capabilities. Nothing it stores ever leaves the Mac.
 @MainActor
 @Observable
-public final class MenuDo: PerchPlugin {
-    public static let identifier = "org.ahlab.perch.menudo"
+public final class Tasks: PerchPlugin {
+    public static let identifier = "org.ahlab.perch.tasks"
     public static let displayName = "Tasks"
     public static let icon = "checkmark.circle"
     public static let capabilities: Set<PluginCapability> = []
@@ -1424,7 +1424,7 @@ public final class MenuDo: PerchPlugin {
 - [ ] **Step 4: Run it to verify it passes**
 
 ```bash
-xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=macOS' -only-testing:PerchTests/MenuDoTests 2>&1 | tail -20
+xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=macOS' -only-testing:PerchTests/TasksTests 2>&1 | tail -20
 ```
 
 Expected: PASS, 6 tests.
@@ -1433,7 +1433,7 @@ Expected: PASS, 6 tests.
 
 ```bash
 git add -A
-git commit -m "feat: conform MenuDo to PerchPlugin"
+git commit -m "feat: conform Tasks to PerchPlugin"
 ```
 
 ---
@@ -1870,15 +1870,15 @@ This is where the app stops being a todo app that happens to have packages, and 
 - Create: `Perch/Host/PluginTabStrip.swift`
 - Create: `Perch/Host/PanelFooter.swift`
 - Modify: `Perch/PerchApp.swift`
-- Modify: `Plugins/MenuDoPlugin/Sources/MenuDoPlugin/Views/TaskListView.swift` (remove the footer and the fixed width)
+- Modify: `Plugins/TasksPlugin/Sources/TasksPlugin/Views/TaskListView.swift` (remove the footer and the fixed width)
 
 **Interfaces:**
-- Consumes: `PluginRegistry`, `MenuBarLabelResolver`, `MenuDo`, `PluginContext.standard(appName:identifier:)`.
+- Consumes: `PluginRegistry`, `MenuBarLabelResolver`, `Tasks`, `PluginContext.standard(appName:identifier:)`.
 - Produces: `PanelView(registry:)`.
 
 - [ ] **Step 1: Strip the footer out of TaskListView**
 
-In `Plugins/MenuDoPlugin/Sources/MenuDoPlugin/Views/TaskListView.swift`, delete the trailing `Divider()`, the whole `HStack { … }` footer block with its `.buttonStyle(.borderless)` and `.padding(12)` modifiers, and the `.frame(width: 320)` on the outer `VStack`. The host owns all three now.
+In `Plugins/TasksPlugin/Sources/TasksPlugin/Views/TaskListView.swift`, delete the trailing `Divider()`, the whole `HStack { … }` footer block with its `.buttonStyle(.borderless)` and `.padding(12)` modifiers, and the `.frame(width: 320)` on the outer `VStack`. The host owns all three now.
 
 After the edit the view ends like this:
 
@@ -2024,7 +2024,7 @@ Replace `Perch/PerchApp.swift` entirely:
 
 ```swift
 import MenuBarExtraAccess
-import MenuDoPlugin
+import TasksPlugin
 import PerchKit
 import SwiftUI
 
@@ -2038,7 +2038,7 @@ struct PerchApp: App {
     /// The one place in Perch that names a concrete plugin.
     private static func makePlugins() -> [any PerchPlugin] {
         [
-            MenuDo(context: .standard(appName: "Perch", identifier: MenuDo.identifier))
+            Tasks(context: .standard(appName: "Perch", identifier: Tasks.identifier))
         ]
     }
 
@@ -2107,7 +2107,7 @@ xcodebuild -project Perch.xcodeproj -scheme Perch -configuration Debug -derivedD
 open build/Build/Products/Debug/Perch.app
 ```
 
-Confirm, with only MenuDo registered:
+Confirm, with only Tasks registered:
 - No tab strip is visible.
 - The panel is 320pt wide with the add field, list, Done section, and a footer holding "Clear completed" (once something is done), the gear, and the power button.
 - The menu bar shows the current task title, truncating at 30 characters.
@@ -2330,7 +2330,7 @@ git commit -m "feat: add a sidebar Settings window with per-plugin capability di
 
 ---
 
-### Task 12: Automatic import from the old MenuDo container
+### Task 12: Automatic import from the old Tasks container
 
 **Files:**
 - Create: `Perch/Host/Migration/LegacyImporter.swift`
@@ -2441,7 +2441,7 @@ final class LegacyImporterTests: XCTestCase {
         writeLegacyPreferences([
             "showTitleInMenuBar": false,
             "titleTruncationLength": 45,
-            "KeyboardShortcuts_openMenuDo": "{\"carbonKeyCode\":1}",
+            "KeyboardShortcuts_openTasks": "{\"carbonKeyCode\":1}",
         ])
         let result = run()
         XCTAssertTrue(result.importedPreferences)
@@ -2470,12 +2470,12 @@ final class LegacyImporterTests: XCTestCase {
     func testLegacyPathsPointAtTheOldContainer() {
         XCTAssertTrue(
             LegacyImporter.legacyTasksURL.path.hasSuffix(
-                "Library/Containers/org.ahlab.MenuDo/Data/Library/Application Support/MenuDo/tasks.json"
+                "Library/Containers/org.ahlab.Tasks/Data/Library/Application Support/Tasks/tasks.json"
             )
         )
         XCTAssertTrue(
             LegacyImporter.legacyPreferencesURL.path.hasSuffix(
-                "Library/Containers/org.ahlab.MenuDo/Data/Library/Preferences/org.ahlab.MenuDo.plist"
+                "Library/Containers/org.ahlab.Tasks/Data/Library/Preferences/org.ahlab.Tasks.plist"
             )
         )
         // Sandboxed, NSHomeDirectory() is the container — the importer must not use it.
@@ -2501,7 +2501,7 @@ Expected: FAIL — `cannot find 'LegacyImporter' in scope`.
 import Foundation
 import PerchKit
 
-/// Carries a MenuDo 1.x user's data across the bundle identifier change.
+/// Carries a Tasks 1.x user's data across the bundle identifier change.
 ///
 /// Renaming the app moved the sandbox container, which took both the task file
 /// and every `UserDefaults` value with it. This runs once, copies both, and
@@ -2523,17 +2523,17 @@ enum LegacyImporter {
 
     private static var legacyContainer: URL {
         realHomeDirectory
-            .appendingPathComponent("Library/Containers/org.ahlab.MenuDo/Data", isDirectory: true)
+            .appendingPathComponent("Library/Containers/org.ahlab.Tasks/Data", isDirectory: true)
     }
 
     static var legacyTasksURL: URL {
         legacyContainer
-            .appendingPathComponent("Library/Application Support/MenuDo/tasks.json")
+            .appendingPathComponent("Library/Application Support/Tasks/tasks.json")
     }
 
     static var legacyPreferencesURL: URL {
         legacyContainer
-            .appendingPathComponent("Library/Preferences/org.ahlab.MenuDo.plist")
+            .appendingPathComponent("Library/Preferences/org.ahlab.Tasks.plist")
     }
 
     /// Preference keys to carry over, old key to new key. The hotkey key is
@@ -2541,7 +2541,7 @@ enum LegacyImporter {
     private static let preferenceKeys = [
         "showTitleInMenuBar": "showTitleInMenuBar",
         "titleTruncationLength": "titleTruncationLength",
-        "KeyboardShortcuts_openMenuDo": "KeyboardShortcuts_openPerch",
+        "KeyboardShortcuts_openTasks": "KeyboardShortcuts_openPerch",
     ]
 
     @discardableResult
@@ -2549,7 +2549,7 @@ enum LegacyImporter {
         run(
             tasksSource: legacyTasksURL,
             tasksDestination: PluginContext
-                .standard(appName: "Perch", identifier: "org.ahlab.perch.menudo")
+                .standard(appName: "Perch", identifier: "org.ahlab.perch.tasks")
                 .storage
                 .url(named: "tasks.json"),
             preferencesSource: legacyPreferencesURL,
@@ -2621,10 +2621,10 @@ Expected: PASS, 8 tests.
 <dict>
 	<key>com.apple.security.app-sandbox</key>
 	<true/>
-	<!-- One-time migration from MenuDo 1.x. Remove once users have moved. -->
+	<!-- One-time migration from Tasks 1.x. Remove once users have moved. -->
 	<key>com.apple.security.temporary-exception.files.home-relative-path.read-only</key>
 	<array>
-		<string>/Library/Containers/org.ahlab.MenuDo/</string>
+		<string>/Library/Containers/org.ahlab.Tasks/</string>
 	</array>
 </dict>
 </plist>
@@ -2632,7 +2632,7 @@ Expected: PASS, 8 tests.
 
 - [ ] **Step 6: Call the importer before any plugin reads storage**
 
-In `Perch/PerchApp.swift`, add an `init` above `body`. It must run before `makePlugins()` constructs `MenuDo`, because `TaskStore` loads in its own initialiser.
+In `Perch/PerchApp.swift`, add an `init` above `body`. It must run before `makePlugins()` constructs `Tasks`, because `TaskStore` loads in its own initialiser.
 
 ```swift
     @State private var registry: PluginRegistry
@@ -2649,12 +2649,12 @@ Delete the old inline initialiser on the `registry` property.
 
 This is the step that determines whether tier 1 actually works. Do not skip it, and do not assume the answer.
 
-> **⚠️ Do not write anything into `~/Library/Containers/org.ahlab.MenuDo/`.** This machine has a real MenuDo container holding the maintainer's actual task list. An earlier draft of this step fabricated a `tasks.json` there with `echo >`, which would have destroyed real user data. The real container is *better* test input than a fabricated one anyway, and the importer copies rather than moves, so reading it is non-destructive.
+> **⚠️ Do not write anything into `~/Library/Containers/org.ahlab.Tasks/`.** This machine has a real Tasks container holding the maintainer's actual task list. An earlier draft of this step fabricated a `tasks.json` there with `echo >`, which would have destroyed real user data. The real container is *better* test input than a fabricated one anyway, and the importer copies rather than moves, so reading it is non-destructive.
 >
 > Verify the container exists and note what's in it, read-only:
 >
 > ```bash
-> cat ~/Library/Containers/org.ahlab.MenuDo/Data/Library/Application\ Support/MenuDo/tasks.json
+> cat ~/Library/Containers/org.ahlab.Tasks/Data/Library/Application\ Support/Tasks/tasks.json
 > ```
 >
 > If this machine has **no** such container, do not create one. Report that tier 1 is unverifiable here and let the `LegacyImporterTests` (which use temp directories) stand as the only evidence.
@@ -2663,7 +2663,7 @@ Only Perch's own container gets cleared — it is disposable, and clearing it is
 
 ```bash
 # Clear Perch's own state so the import is allowed to run. Perch's container
-# only ever holds data this plan created; MenuDo's is left strictly alone.
+# only ever holds data this plan created; Tasks's is left strictly alone.
 defaults delete org.ahlab.Perch 2>/dev/null
 rm -rf ~/Library/Containers/org.ahlab.Perch
 
@@ -2671,7 +2671,7 @@ xcodebuild -project Perch.xcodeproj -scheme Perch -configuration Debug -derivedD
 open build/Build/Products/Debug/Perch.app
 ```
 
-Expected: the tasks from the real MenuDo `tasks.json` appear in Perch's panel and its menu bar, **and the original file is still present and unmodified afterwards**. Check that second part explicitly — a migration that moves instead of copying would pass the first check and still be a data-loss bug.
+Expected: the tasks from the real Tasks `tasks.json` appear in Perch's panel and its menu bar, **and the original file is still present and unmodified afterwards**. Check that second part explicitly — a migration that moves instead of copying would pass the first check and still be a data-loss bug.
 
 **Record the outcome in the commit message.** If the task does not appear, the entitlement did not grant access — that is exactly the risk the spec named, Task 13's manual fallback becomes the only path, and Step 5's entitlement should be reverted rather than shipped for nothing.
 
@@ -2679,7 +2679,7 @@ Expected: the tasks from the real MenuDo `tasks.json` appear in Perch's panel an
 
 ```bash
 git add -A
-git commit -m "feat: import tasks and preferences from the MenuDo 1.x container"
+git commit -m "feat: import tasks and preferences from the Tasks 1.x container"
 ```
 
 ---
@@ -2713,7 +2713,7 @@ final class MigrationState {
     var notice: String?
 
     static let importedNotice =
-        "Imported your tasks from MenuDo. You can move MenuDo.app to the Trash."
+        "Imported your tasks from Tasks. You can move Tasks.app to the Trash."
 
     func dismiss() { notice = nil }
 }
@@ -2803,9 +2803,9 @@ In `Perch/Views/GeneralSettingsView.swift`, add the property and a new section a
 
 ```swift
             Section("Migration") {
-                Button("Import from MenuDo…") { importFromMenuDo() }
+                Button("Import from Tasks…") { importFromTasks() }
                 Text(
-                    "Only needed if your tasks didn't carry over from MenuDo 1.x. "
+                    "Only needed if your tasks didn't carry over from Tasks 1.x. "
                     + "Choose the old tasks.json when prompted."
                 )
                 .font(.caption)
@@ -2819,9 +2819,9 @@ and the handler, below `body`:
     /// The fallback for when the sandbox refuses the automatic import. The
     /// user picking the file is itself the consent that grants read access, so
     /// this path works with no entitlement at all.
-    private func importFromMenuDo() {
+    private func importFromTasks() {
         let panel = NSOpenPanel()
-        panel.title = "Import from MenuDo"
+        panel.title = "Import from Tasks"
         panel.prompt = "Import"
         panel.allowedContentTypes = [.json]
         panel.directoryURL = LegacyImporter.legacyTasksURL.deletingLastPathComponent()
@@ -2830,7 +2830,7 @@ and the handler, below `body`:
         guard panel.runModal() == .OK, let source = panel.url else { return }
 
         let destination = PluginContext
-            .standard(appName: "Perch", identifier: "org.ahlab.perch.menudo")
+            .standard(appName: "Perch", identifier: "org.ahlab.perch.tasks")
             .storage
             .url(named: "tasks.json")
         if LegacyImporter.importTasks(from: source, to: destination) {
@@ -2863,13 +2863,13 @@ xcodebuild -project Perch.xcodeproj -scheme Perch -configuration Debug -derivedD
 open build/Build/Products/Debug/Perch.app
 ```
 
-With the real MenuDo container still in place (never fabricate one — see Task 12 Step 7), confirm the notice appears at the top of the panel and dismisses. Then open Settings → General → Import from MenuDo… and confirm the open panel appears at the old container path. Do not select and import anything destructive; opening the panel and cancelling is the check.
+With the real Tasks container still in place (never fabricate one — see Task 12 Step 7), confirm the notice appears at the top of the panel and dismisses. Then open Settings → General → Import from Tasks… and confirm the open panel appears at the old container path. Do not select and import anything destructive; opening the panel and cancelling is the check.
 
 - [ ] **Step 7: Commit**
 
 ```bash
 git add -A
-git commit -m "feat: add the manual MenuDo import fallback and first-run notice"
+git commit -m "feat: add the manual Tasks import fallback and first-run notice"
 ```
 
 ---
@@ -2984,21 +2984,21 @@ try again:
 xattr -dr com.apple.quarantine /Applications/Perch.app
 ```
 
-## Upgrading from MenuDo
+## Upgrading from Tasks
 
-Perch is MenuDo 1.x renamed and rebuilt as a plugin host. Your tasks and
+Perch is Tasks 1.x renamed and rebuilt as a plugin host. Your tasks and
 settings are carried across automatically the first time you launch it.
 
 macOS gives each app its own sandbox, so if the automatic import doesn't find
-your old data, open **Settings → General → Import from MenuDo…** and choose the
+your old data, open **Settings → General → Import from Tasks…** and choose the
 old `tasks.json`. It lives at:
 
 ```
-~/Library/Containers/org.ahlab.MenuDo/Data/Library/Application Support/MenuDo/tasks.json
+~/Library/Containers/org.ahlab.Tasks/Data/Library/Application Support/Tasks/tasks.json
 ```
 
-Once your tasks are in Perch, **move `MenuDo.app` to the Trash**. Perch can't
-unregister MenuDo's launch-at-login entry, so until the old app is deleted both
+Once your tasks are in Perch, **move `Tasks.app` to the Trash**. Perch can't
+unregister Tasks's launch-at-login entry, so until the old app is deleted both
 will start when you log in.
 
 ## Plugins
@@ -3022,7 +3022,7 @@ Click the gear icon in the panel.
 
 | Pane | What's in it |
 |---|---|
-| General | Which plugin owns the menu bar, title display and length, launch at login, global hotkey, MenuDo import |
+| General | Which plugin owns the menu bar, title display and length, launch at login, global hotkey, Tasks import |
 | Plugins | Enable or disable each plugin, and see what each one can access |
 | Tasks | Per-plugin settings, when a plugin has any |
 
@@ -3068,9 +3068,9 @@ xcodebuild test -project Perch.xcodeproj -scheme Perch -destination 'platform=ma
 
 ```
 PerchKit/                The public plugin API. Knows nothing about the host.
-Plugins/MenuDoPlugin/    The Tasks plugin: model, store, views
+Plugins/TasksPlugin/    The Tasks plugin: model, store, views
 Perch/
-  Host/                  Registry, panel chrome, menu bar label, MenuDo import
+  Host/                  Registry, panel chrome, menu bar label, Tasks import
   Views/                 Settings window
   Support/               Launch at login, hotkey state, title truncation
 PerchTests/              Unit tests for the kit, the plugin, and the host
@@ -3129,6 +3129,6 @@ git push
 
 ## Notes for the implementer
 
-- **The acceptance criterion for the whole plan** is that a MenuDo 1.x user upgrading to Perch sees no difference: same menu bar text, same 320pt panel with no tab strip, same tasks. If any task breaks that, the task is wrong, not the criterion.
+- **The acceptance criterion for the whole plan** is that a Tasks 1.x user upgrading to Perch sees no difference: same menu bar text, same 320pt panel with no tab strip, same tasks. If any task breaks that, the task is wrong, not the criterion.
 - **Task 12 Step 7 is a real experiment, not a formality.** The spec explicitly flags that the temporary-exception entitlement may not grant access to another app's container. Report what actually happened.
-- Do not add hooks, extension points, or capabilities to `PerchKit` beyond what this plan's tasks specify. The Google Analytics plugin gets its own spec, and guessing its needs now is how the protocol ends up the wrong shape. (`PluginDefaults` and `PluginCapability` have no consumer in MenuDo and are still in scope — the approved spec calls for both, one to prevent key collisions and one to drive the Settings disclosure. That ruling is made; do not re-litigate it, and do not extend it to anything else.)
+- Do not add hooks, extension points, or capabilities to `PerchKit` beyond what this plan's tasks specify. The Google Analytics plugin gets its own spec, and guessing its needs now is how the protocol ends up the wrong shape. (`PluginDefaults` and `PluginCapability` have no consumer in Tasks and are still in scope — the approved spec calls for both, one to prevent key collisions and one to drive the Settings disclosure. That ruling is made; do not re-litigate it, and do not extend it to anything else.)

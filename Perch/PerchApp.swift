@@ -3,7 +3,7 @@ import AppKit
 import BusyPlugin
 import MarketPlugin
 import MenuBarExtraAccess
-import MenuDoPlugin
+import TasksPlugin
 import PerchKit
 import ServerPlugin
 import SwiftUI
@@ -25,6 +25,15 @@ struct PerchApp: App {
     @AppStorage("titleTruncationLength") private var titleTruncationLength = 30
 
     init() {
+        // Before any plugin is built: a plugin reads its storage in `init`.
+        // Not under test: the suite runs inside the app, against the real
+        // container, and a test run must not move the user's data out from
+        // under the copy of Perch they have installed.
+        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil {
+            PluginIdentifierMigration.tasks.run(
+                pluginsDirectory: PluginContext.perch("").storage.directory, defaults: .standard
+            )
+        }
         let registry = PluginRegistry(plugins: PerchApp.makePlugins())
         _registry = State(initialValue: registry)
         PerchApp.flushPluginsOnTermination(registry)
@@ -33,7 +42,7 @@ struct PerchApp: App {
     /// The one place in Perch that decides which plugins exist.
     private static func makePlugins() -> [any PerchPlugin] {
         [
-            MenuDo(context: .perch(MenuDo.identifier)),
+            Tasks(context: .perch(Tasks.identifier)),
             Analytics(context: .perch(Analytics.identifier)),
             Market(context: .perch(Market.identifier)),
             Busy(context: .perch(Busy.identifier)),

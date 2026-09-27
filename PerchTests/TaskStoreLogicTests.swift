@@ -1,4 +1,4 @@
-import MenuDoPlugin
+import TasksPlugin
 import PerchKit
 import XCTest
 

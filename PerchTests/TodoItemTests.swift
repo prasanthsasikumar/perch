@@ -1,5 +1,5 @@
 import XCTest
-import MenuDoPlugin
+import TasksPlugin
 
 final class TodoItemTests: XCTestCase {
     func testDefaults() {

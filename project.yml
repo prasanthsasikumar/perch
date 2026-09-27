@@ -12,8 +12,8 @@ packages:
     from: 1.0.0
   PerchKit:
     path: PerchKit
-  MenuDoPlugin:
-    path: Plugins/MenuDoPlugin
+  TasksPlugin:
+    path: Plugins/TasksPlugin
   AnalyticsPlugin:
     path: Plugins/AnalyticsPlugin
   MarketPlugin:
@@ -42,8 +42,8 @@ targets:
       - package: MenuBarExtraAccess
       - package: PerchKit
         product: PerchKit
-      - package: MenuDoPlugin
-        product: MenuDoPlugin
+      - package: TasksPlugin
+        product: TasksPlugin
       - package: AnalyticsPlugin
         product: AnalyticsPlugin
       - package: MarketPlugin
@@ -207,8 +207,8 @@ targets:
       - target: Perch
       - package: PerchKit
         product: PerchKit
-      - package: MenuDoPlugin
-        product: MenuDoPlugin
+      - package: TasksPlugin
+        product: TasksPlugin
       - package: AnalyticsPlugin
         product: AnalyticsPlugin
       - package: MarketPlugin

@@ -61,7 +61,7 @@ Plugins/MarketPlugin/
 ```
 
 Registered in `PerchApp.makePlugins()` and added to `project.yml` as a local
-package, exactly as `MenuDoPlugin` and `AnalyticsPlugin` are.
+package, exactly as `TasksPlugin` and `AnalyticsPlugin` are.
 
 Identifier `org.ahlab.perch.market`, display name **Market**, icon
 `binoculars`, capabilities `.network` and `.notifications`.
