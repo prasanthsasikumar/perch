@@ -183,4 +183,10 @@ final class PluginRegistryTests: XCTestCase {
         registry.setEnabled(false, for: "beta")
         XCTAssertFalse(registry.showsTabStrip)
     }
+
+    func testTabsSwitchToIconsOnlyOnceNamesWouldNotFit() {
+        XCTAssertFalse(PluginRegistry.tabsUseIcons(count: 5))
+        XCTAssertTrue(PluginRegistry.tabsUseIcons(count: 6))
+        XCTAssertFalse(makeRegistry().tabStripUsesIcons)
+    }
 }
