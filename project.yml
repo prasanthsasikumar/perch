@@ -28,6 +28,7 @@ targets:
     platform: macOS
     sources:
       - Perch
+      - Shared
       - path: Perch/Resources
         buildPhase: resources
     dependencies:
