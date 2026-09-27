@@ -1,7 +1,7 @@
 # Keep-awake toggle — design
 
 **Date:** 2026-09-27
-**Status:** awaiting review
+**Status:** approved
 
 A one-click replacement for typing `sudo pmset -a disablesleep 1` and
 `sudo pmset -a disablesleep 0`. With it on, the Mac stays awake when the lid
@@ -147,7 +147,10 @@ Left of the gear. `cup.and.saucer` when sleep is normal,
 | user later removes approval | next toggle lands in `.needsApproval` again |
 | connection interrupted or invalidated | `.failed`; state re-read from the system |
 | `pmset` exits non-zero | helper replies with its stderr; `.failed` |
-| helper from an older Perch still registered | unregister and re-register on a version mismatch at launch |
+
+An updated Perch needs no re-registration. The launchd job names the helper
+by its path inside the bundle, and the helper exits when idle, so the next
+connection after an update starts the new binary.
 
 ## Testing
 
@@ -170,15 +173,17 @@ Manual, on a signed build, because root and XPC cannot run under XCTest:
 
 ## Order of work, and the risks it retires
 
-1. **Helper, registration and a bare XPC round trip from the sandboxed app**,
-   before any UI. This is the part most likely to need adjusting. If the
-   mach-lookup exception is not enough, the fallback is an app-group-prefixed
-   service name.
-2. **State reading from inside the sandbox.** If the sandbox blocks the IOKit
-   read, the helper gains `getSleepDisabled(reply:)` and the reader calls it.
-3. Controller and its tests.
+1. The shared contract and the `pmset` command, with tests.
+2. The helper target, embedded and signed.
+3. Reader, helper client and controller, with tests.
 4. Footer button.
-5. README, release, and the manual checks above.
+5. **Proof on a real build.** The button is the harness, which is why it
+   comes first. Two risks are retired here:
+   - *Sandbox to daemon XPC.* If the mach-lookup exception is not enough,
+     the fallback is an app-group-prefixed service name.
+   - *Reading state from inside the sandbox.* If the sandbox blocks the
+     IOKit read, the helper gains `getSleepDisabled(reply:)`.
+6. README.
 
 ## Out of scope
 
