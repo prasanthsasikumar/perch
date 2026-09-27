@@ -29,19 +29,15 @@ targets:
     sources:
       - Perch
       - Shared
-      - path: PerchHelper/org.ahlab.Perch.helper.plist
-        buildPhase:
-          copyFiles:
-            destination: wrapper
-            subpath: Contents/Library/LaunchDaemons
       - path: Perch/Resources
         buildPhase: resources
     dependencies:
-      - target: PerchHelper
+      - target: PerchKeepAwake
         embed: true
         codeSign: false
         copy:
-          destination: executables
+          destination: wrapper
+          subpath: Contents/Helpers
       - package: KeyboardShortcuts
       - package: MenuBarExtraAccess
       - package: PerchKit
@@ -104,8 +100,56 @@ targets:
         NSHumanReadableCopyright: "© 2026 Prasanth Sasikumar"
     scheme:
       testTargets: [PerchTests]
+  # Registers the root helper, then quits. Perch cannot do this itself: it is
+  # sandboxed, and the sandbox denies job-creation. This app is deliberately
+  # not sandboxed, and owns the helper and its launchd job.
+  PerchKeepAwake:
+    type: application
+    platform: macOS
+    sources:
+      - path: PerchKeepAwake
+      - Shared
+      - path: PerchHelper/org.ahlab.Perch.helper.plist
+        buildPhase:
+          copyFiles:
+            destination: wrapper
+            subpath: Contents/Library/LaunchDaemons
+    dependencies:
+      - target: PerchHelper
+        embed: true
+        codeSign: false
+        copy:
+          destination: executables
+    settings:
+      base:
+        PRODUCT_NAME: PerchKeepAwake
+        PRODUCT_BUNDLE_IDENTIFIER: org.ahlab.Perch.keepawake
+        MARKETING_VERSION: "2.3.1"
+        CURRENT_PROJECT_VERSION: "7"
+        SKIP_INSTALL: YES
+      configs:
+        Debug:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: "Apple Development: Prasanth Sasikumar (5AD8QG2238)"
+          DEVELOPMENT_TEAM: 3U4384584Z
+          PROVISIONING_PROFILE_SPECIFIER: ""
+        Release:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: "Developer ID Application: FLOWXR PTE. LTD. (3U4384584Z)"
+          DEVELOPMENT_TEAM: 3U4384584Z
+          ENABLE_HARDENED_RUNTIME: YES
+          CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+          OTHER_CODE_SIGN_FLAGS: "--timestamp"
+    info:
+      path: PerchKeepAwake/Info.plist
+      properties:
+        LSUIElement: true
+        CFBundleDisplayName: Perch Keep Awake
+        CFBundleShortVersionString: "2.3.1"
+        CFBundleVersion: "7"
+        NSHumanReadableCopyright: "© 2026 Prasanth Sasikumar"
   # The root helper behind the keep-awake toggle. Registered with
-  # SMAppService.daemon and run by launchd, never launched directly.
+  # SMAppService.daemon by PerchKeepAwake and run by launchd, never launched directly.
   PerchHelper:
     type: tool
     platform: macOS

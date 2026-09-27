@@ -10,6 +10,32 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-27-keep-awake-toggle-design.md`
 
+## Amendment, made during Task 5
+
+Tasks 2 and 3 below are as first written and were executed that way. The
+first real click then showed that the sandbox refuses to let Perch register a
+daemon (`Sandbox: Perch deny(1) job-creation`), so the following changed.
+The spec's "Who registers the helper" section has the reasoning.
+
+- A third target, `PerchKeepAwake`, an unsandboxed companion app embedded at
+  `Perch.app/Contents/Helpers/PerchKeepAwake.app`. It owns the helper and the
+  launchd plist, registers the helper, and quits.
+- Perch no longer embeds the helper or the plist directly.
+- `HelperRegistering`, `HelperRegistrationState` and `DaemonRegistration` are
+  gone. In their place: `protocol HelperInstalling { func install() }` and
+  `CompanionInstaller`, which launches the companion.
+- `SleepHelperError` became `enum SleepHelperFailure { case unreachable(String), rejected(String) }`.
+  An unreachable helper runs the installer; a rejection is reported.
+- `SleepController.init(reader:helper:installer:)`. `refresh()` only re-reads
+  the setting.
+- The approval tooltip is "Allow Perch Keep Awake in System Settings → Login
+  Items, then click again".
+- Review Focus 2 and 3 no longer apply as written: Perch cannot see
+  registration state. Their replacements are `testWorksOnTheClickAfterApproval`
+  and the companion's alert.
+- The helper needed `OTHER_CODE_SIGN_FLAGS: --identifier org.ahlab.Perch.helper`,
+  and a clean build for the embedded copy to pick it up.
+
 ## Global Constraints
 
 - Deployment target macOS 14.0.

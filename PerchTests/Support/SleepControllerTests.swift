@@ -28,37 +28,26 @@ private final class FakeHelper: SleepHelperClient {
 }
 
 @MainActor
-private final class FakeRegistration: HelperRegistering {
-    var state: HelperRegistrationState = .enabled
-    var stateAfterRegister: HelperRegistrationState = .enabled
-    var registerError: Error?
-    var registerCalls = 0
-    var openedSettings = 0
-
-    func register() throws {
-        registerCalls += 1
-        state = stateAfterRegister
-        if let registerError { throw registerError }
-    }
-
-    func openApprovalSettings() { openedSettings += 1 }
+private final class FakeInstaller: HelperInstalling {
+    var installs = 0
+    func install() { installs += 1 }
 }
 
 @MainActor
 final class SleepControllerTests: XCTestCase {
     private var reader: FakeReader!
     private var helper: FakeHelper!
-    private var registration: FakeRegistration!
+    private var installer: FakeInstaller!
 
     override func setUp() async throws {
         reader = FakeReader()
         helper = FakeHelper()
-        registration = FakeRegistration()
+        installer = FakeInstaller()
         helper.onSuccess = { [reader] in reader?.value = $0 }
     }
 
     private func makeController() -> SleepController {
-        SleepController(reader: reader, helper: helper, registration: registration)
+        SleepController(reader: reader, helper: helper, installer: installer)
     }
 
     func testStartsFromTheSystemState() {
@@ -90,7 +79,7 @@ final class SleepControllerTests: XCTestCase {
     }
 
     func testHelperFailureIsReportedAndStateUnchanged() async {
-        helper.error = SleepHelperError("pmset: must be root")
+        helper.error = SleepHelperFailure.rejected("pmset: must be root")
         let controller = makeController()
 
         await controller.toggle()
@@ -101,7 +90,7 @@ final class SleepControllerTests: XCTestCase {
     }
 
     func testFailureClearsOnNextSuccess() async {
-        helper.error = SleepHelperError("interrupted")
+        helper.error = SleepHelperFailure.rejected("interrupted")
         let controller = makeController()
         await controller.toggle()
 
@@ -112,65 +101,41 @@ final class SleepControllerTests: XCTestCase {
         XCTAssertTrue(controller.isSleepDisabled)
     }
 
-    func testFirstToggleRegistersTheHelper() async {
-        registration.state = .notRegistered
+    /// Perch is sandboxed and cannot ask whether the helper is registered;
+    /// an unreachable helper is how it finds out.
+    func testUnreachableHelperRunsTheInstaller() async {
+        helper.error = SleepHelperFailure.unreachable("Couldn't communicate with a helper application.")
         let controller = makeController()
 
         await controller.toggle()
 
-        XCTAssertEqual(registration.registerCalls, 1)
-        XCTAssertEqual(helper.calls, [true])
-    }
-
-    func testNeedsApprovalAfterRegistering() async {
-        registration.state = .notRegistered
-        registration.stateAfterRegister = .requiresApproval
-        let controller = makeController()
-
-        await controller.toggle()
-
+        XCTAssertEqual(installer.installs, 1)
         XCTAssertEqual(controller.status, .needsApproval)
-        XCTAssertEqual(registration.openedSettings, 1)
-        XCTAssertTrue(helper.calls.isEmpty)
-        XCTAssertEqual(controller.tooltip, "Allow Perch in System Settings → Login Items")
+        XCTAssertFalse(controller.isSleepDisabled)
+        XCTAssertEqual(controller.tooltip, "Allow Perch Keep Awake in System Settings → Login Items, then click again")
     }
 
-    /// `SMAppService.register()` throws when approval is pending; that is the
-    /// approval case, not a failure.
-    func testRegisterThrowingWhileApprovalPendingIsNeedsApproval() async {
-        registration.state = .notRegistered
-        registration.stateAfterRegister = .requiresApproval
-        registration.registerError = SleepHelperError("Operation not permitted")
+    func testWorksOnTheClickAfterApproval() async {
+        helper.error = SleepHelperFailure.unreachable("no helper")
+        let controller = makeController()
+        await controller.toggle()
+
+        helper.error = nil
+        await controller.toggle()
+
+        XCTAssertEqual(installer.installs, 1)
+        XCTAssertEqual(controller.status, .ready)
+        XCTAssertTrue(controller.isSleepDisabled)
+    }
+
+    func testARejectionDoesNotRunTheInstaller() async {
+        helper.error = SleepHelperFailure.rejected("pmset exited with status 71")
         let controller = makeController()
 
         await controller.toggle()
 
-        XCTAssertEqual(controller.status, .needsApproval)
-        XCTAssertTrue(helper.calls.isEmpty)
-    }
-
-    func testAlreadyAwaitingApprovalDoesNotRegisterAgain() async {
-        registration.state = .requiresApproval
-        let controller = makeController()
-
-        await controller.toggle()
-
-        XCTAssertEqual(registration.registerCalls, 0)
-        XCTAssertEqual(registration.openedSettings, 1)
-        XCTAssertEqual(controller.status, .needsApproval)
-    }
-
-    func testRegistrationFailureIsReported() async {
-        registration.state = .notRegistered
-        registration.stateAfterRegister = .notRegistered
-        registration.registerError = SleepHelperError("The helper could not be found")
-        let controller = makeController()
-
-        await controller.toggle()
-
-        XCTAssertEqual(controller.status, .failed("The helper could not be found"))
-        XCTAssertTrue(helper.calls.isEmpty)
-        XCTAssertEqual(registration.openedSettings, 0)
+        XCTAssertEqual(installer.installs, 0)
+        XCTAssertEqual(controller.status, .failed("pmset exited with status 71"))
     }
 
     func testRefreshPicksUpAChangeMadeOutsidePerch() {
@@ -180,18 +145,6 @@ final class SleepControllerTests: XCTestCase {
         controller.refresh()
 
         XCTAssertTrue(controller.isSleepDisabled)
-    }
-
-    func testRefreshClearsNeedsApprovalOnceEnabled() async {
-        registration.state = .requiresApproval
-        let controller = makeController()
-        await controller.toggle()
-        XCTAssertEqual(controller.status, .needsApproval)
-
-        registration.state = .enabled
-        controller.refresh()
-
-        XCTAssertEqual(controller.status, .ready)
     }
 
     func testToggleWhileBusyIsIgnored() async {

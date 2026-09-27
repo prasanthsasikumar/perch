@@ -21,12 +21,12 @@ final class SleepController {
 
     private let reader: SleepStateReading
     private let helper: SleepHelperClient
-    private let registration: HelperRegistering
+    private let installer: HelperInstalling
 
-    init(reader: SleepStateReading, helper: SleepHelperClient, registration: HelperRegistering) {
+    init(reader: SleepStateReading, helper: SleepHelperClient, installer: HelperInstalling) {
         self.reader = reader
         self.helper = helper
-        self.registration = registration
+        self.installer = installer
         isSleepDisabled = reader.isSleepDisabled()
     }
 
@@ -34,14 +34,14 @@ final class SleepController {
         self.init(
             reader: IOKitSleepStateReader(),
             helper: XPCSleepHelperClient(),
-            registration: DaemonRegistration()
+            installer: CompanionInstaller()
         )
     }
 
     var tooltip: String {
         switch status {
         case .needsApproval:
-            "Allow Perch in System Settings → Login Items"
+            "Allow Perch Keep Awake in System Settings → Login Items, then click again"
         case .failed(let message):
             message
         case .ready:
@@ -52,10 +52,6 @@ final class SleepController {
     /// Called at launch and whenever the panel opens.
     func refresh() {
         isSleepDisabled = reader.isSleepDisabled()
-        // The user may have approved the helper since we last looked.
-        if status == .needsApproval, registration.state == .enabled {
-            status = .ready
-        }
     }
 
     func toggle() async {
@@ -63,49 +59,17 @@ final class SleepController {
         isBusy = true
         defer { isBusy = false }
 
-        guard ensureHelperIsUsable() else { return }
-
         do {
             try await helper.setSleepDisabled(!isSleepDisabled)
             status = .ready
+        } catch SleepHelperFailure.unreachable {
+            // The sandbox will not tell Perch whether the helper is
+            // registered; failing to reach it is how we find out.
+            installer.install()
+            status = .needsApproval
         } catch {
             status = .failed(error.localizedDescription)
         }
         isSleepDisabled = reader.isSleepDisabled()
-    }
-
-    /// Registers the helper on first use. Returns `false`, with `status`
-    /// explaining why, when the helper cannot be called yet.
-    private func ensureHelperIsUsable() -> Bool {
-        switch registration.state {
-        case .enabled:
-            return true
-        case .requiresApproval:
-            askForApproval()
-            return false
-        case .notRegistered:
-            do {
-                try registration.register()
-            } catch {
-                // `register()` throws while approval is pending; only a
-                // throw that leaves us anywhere else is a real failure.
-                guard registration.state == .requiresApproval else {
-                    status = .failed(error.localizedDescription)
-                    return false
-                }
-            }
-            if registration.state == .enabled { return true }
-            if registration.state == .requiresApproval {
-                askForApproval()
-            } else {
-                status = .failed("The helper could not be registered")
-            }
-            return false
-        }
-    }
-
-    private func askForApproval() {
-        status = .needsApproval
-        registration.openApprovalSettings()
     }
 }

@@ -21,10 +21,13 @@ struct PanelFooter: View {
             Button {
                 Task { await sleep.toggle() }
             } label: {
-                Image(systemName: sleep.isSleepDisabled ? "cup.and.saucer.fill" : "cup.and.saucer")
-                    .foregroundStyle(
-                        sleep.isSleepDisabled ? AnyShapeStyle(.tint) : AnyShapeStyle(.foreground)
-                    )
+                // Off, it takes the button style's colour like the gear and
+                // the power button beside it; only on does it stand out.
+                if sleep.isSleepDisabled {
+                    Image(systemName: "cup.and.saucer.fill").foregroundStyle(.tint)
+                } else {
+                    Image(systemName: "cup.and.saucer")
+                }
             }
             .disabled(sleep.isBusy)
             .help(sleep.tooltip)

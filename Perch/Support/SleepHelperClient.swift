@@ -1,18 +1,23 @@
+import AppKit
 import Foundation
-import ServiceManagement
 
-struct SleepHelperError: LocalizedError, Equatable {
-    let message: String
+enum SleepHelperFailure: LocalizedError, Equatable {
+    /// The connection itself failed: the helper is not registered, not yet
+    /// approved, or gone.
+    case unreachable(String)
+    /// The helper answered, and the answer was no.
+    case rejected(String)
 
-    init(_ message: String) {
-        self.message = message
+    var errorDescription: String? {
+        switch self {
+        case .unreachable(let message), .rejected(let message): message
+        }
     }
-
-    var errorDescription: String? { message }
 }
 
 @MainActor
 protocol SleepHelperClient {
+    /// Throws `SleepHelperFailure`.
     func setSleepDisabled(_ disabled: Bool) async throws
 }
 
@@ -32,15 +37,15 @@ struct XPCSleepHelperClient: SleepHelperClient {
         // Exactly one of the error handler and the reply is ever called.
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             let proxy = connection.remoteObjectProxyWithErrorHandler { error in
-                continuation.resume(throwing: SleepHelperError(error.localizedDescription))
+                continuation.resume(throwing: SleepHelperFailure.unreachable(error.localizedDescription))
             }
             guard let helper = proxy as? SleepHelperProtocol else {
-                continuation.resume(throwing: SleepHelperError("The helper did not respond"))
+                continuation.resume(throwing: SleepHelperFailure.unreachable("The helper did not respond"))
                 return
             }
             helper.setSleepDisabled(disabled) { message in
                 if let message {
-                    continuation.resume(throwing: SleepHelperError(message))
+                    continuation.resume(throwing: SleepHelperFailure.rejected(message))
                 } else {
                     continuation.resume()
                 }
@@ -49,38 +54,21 @@ struct XPCSleepHelperClient: SleepHelperClient {
     }
 }
 
-enum HelperRegistrationState: Equatable {
-    case notRegistered
-    case enabled
-    case requiresApproval
-}
-
 @MainActor
-protocol HelperRegistering {
-    var state: HelperRegistrationState { get }
-    func register() throws
-    func openApprovalSettings()
+protocol HelperInstalling {
+    func install()
 }
 
-struct DaemonRegistration: HelperRegistering {
-    private var service: SMAppService {
-        .daemon(plistName: SleepHelper.daemonPlistName)
-    }
-
-    var state: HelperRegistrationState {
-        switch service.status {
-        case .enabled: .enabled
-        case .requiresApproval: .requiresApproval
-        case .notRegistered, .notFound: .notRegistered
-        @unknown default: .notRegistered
-        }
-    }
-
-    func register() throws {
-        try service.register()
-    }
-
-    func openApprovalSettings() {
-        SMAppService.openSystemSettingsLoginItems()
+/// Perch is sandboxed, and the sandbox refuses to let it register a daemon
+/// (`deny job-creation`). So the helper belongs to a small companion app
+/// inside the bundle, which is not sandboxed and does nothing but register
+/// it, ask for approval if that is needed, and quit.
+struct CompanionInstaller: HelperInstalling {
+    func install() {
+        let companion = Bundle.main.bundleURL
+            .appending(path: SleepHelper.companionPath, directoryHint: .isDirectory)
+        NSWorkspace.shared.openApplication(
+            at: companion, configuration: NSWorkspace.OpenConfiguration()
+        )
     }
 }

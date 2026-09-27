@@ -1,7 +1,8 @@
 # Keep-awake toggle — design
 
 **Date:** 2026-09-27
-**Status:** approved
+**Status:** approved, implemented. Amended during implementation: see
+"Who registers the helper".
 
 A one-click replacement for typing `sudo pmset -a disablesleep 1` and
 `sudo pmset -a disablesleep 0`. With it on, the Mac stays awake when the lid
@@ -24,6 +25,25 @@ is closed.
 both routes a non-sandboxed app would take: `sudo` (setuid binaries do not
 run) and AppleScript's `with administrator privileges`.
 
+## Who registers the helper
+
+The design first had Perch register the helper itself. That cannot work: the
+sandbox refuses, and says so in the system log as
+`Sandbox: Perch deny(1) job-creation`. Found on 2026-09-27 on the first real
+click.
+
+So the helper belongs to a companion app, `PerchKeepAwake.app`, inside
+Perch's bundle. It is not sandboxed. It registers the helper, opens Login
+Items if approval is needed, shows an alert if registration fails outright,
+and quits. It has no window and no Dock icon.
+
+Dropping Perch's sandbox instead was rejected: it would move every plugin's
+stored data out of the container.
+
+A consequence: Perch cannot ask whether the helper is registered, because
+`SMAppService` answers for the calling app's own bundle. Perch learns it by
+trying. A helper it cannot reach means "run the companion".
+
 A power assertion (`IOPMAssertion`, what `caffeinate` uses) is not a
 substitute. It prevents idle sleep; it does not prevent the sleep that
 closing the lid causes. `disablesleep` is the setting that does.
@@ -32,19 +52,23 @@ closing the lid causes. `disablesleep` is the setting that does.
 
 | Piece | Where | Job |
 |---|---|---|
-| `PerchHelper` | new command-line target `PerchHelper/`, embedded in `Perch.app` | root LaunchDaemon; runs `pmset` |
+| `PerchKeepAwake` | new app target `PerchKeepAwake/`, embedded in `Perch.app/Contents/Helpers` | registers the helper, then quits |
+| `PerchHelper` | new command-line target `PerchHelper/`, embedded in the companion | root LaunchDaemon; runs `pmset` |
 | `SleepHelperProtocol` | `Shared/SleepHelperProtocol.swift`, compiled into both targets | the XPC interface |
 | `SleepStateReader` | `Perch/Support/` | reads the current setting |
-| `SleepController` | `Perch/Support/` | observable state; registers and calls the helper |
+| `SleepController` | `Perch/Support/` | observable state; calls the helper, runs the companion when it cannot |
 | footer button | `Perch/Host/PanelFooter.swift` | the control |
 
 ### The helper
 
-Installed inside the bundle, registered with `SMAppService.daemon`:
+Installed inside the companion, which registers it with
+`SMAppService.daemon`:
 
 ```
-Perch.app/Contents/MacOS/PerchHelper
-Perch.app/Contents/Library/LaunchDaemons/org.ahlab.Perch.helper.plist
+Perch.app/Contents/Helpers/PerchKeepAwake.app/
+  Contents/MacOS/PerchKeepAwake
+  Contents/MacOS/PerchHelper
+  Contents/Library/LaunchDaemons/org.ahlab.Perch.helper.plist
 ```
 
 The launchd plist names the binary with `BundleProgram`, declares the mach
@@ -101,13 +125,14 @@ final class SleepController {
 
 `toggle()`:
 
-1. If the daemon is not registered, register it.
-2. If it then needs approval, set `.needsApproval`, open System Settings to
-   Login Items (`SMAppService.openSystemSettingsLoginItems()`), and stop.
-3. Otherwise call the helper, then `refresh()` from the system. The button
-   shows what the system reports, not what was requested.
+1. Call the helper.
+2. If the helper cannot be reached, launch the companion and set
+   `.needsApproval`. The next click, after approval, succeeds.
+3. If the helper answers with an error, set `.failed` with its message.
+4. Either way, `refresh()` from the system. The button shows what the system
+   reports, not what was requested.
 
-The helper client and the state reader are protocols injected into the
+The helper client, the installer and the state reader are protocols injected into the
 controller, so it can be tested without root or XPC.
 
 ### The button
@@ -119,15 +144,17 @@ Left of the gear. `cup.and.saucer` when sleep is normal,
 |---|---|
 | off | Keep awake with lid closed |
 | on | Staying awake with lid closed |
-| needs approval | Allow Perch in System Settings → Login Items |
+| needs approval | Allow Perch Keep Awake in System Settings → Login Items, then click again |
 | failed | the helper's message |
 
 ## Changes outside new code
 
-- **`project.yml`**: the `PerchHelper` target (signed like Perch: Development
-  in Debug; Developer ID, hardened runtime and `--timestamp` in Release), a
-  dependency from Perch that embeds it in `Contents/MacOS`, and a copy-files
-  phase for the launchd plist.
+- **`project.yml`**: the `PerchHelper` and `PerchKeepAwake` targets (signed
+  like Perch: Development in Debug; Developer ID, hardened runtime and
+  `--timestamp` in Release). The companion embeds the helper and the launchd
+  plist; Perch embeds the companion. The helper is signed with an explicit
+  `--identifier`, because a command-line tool is otherwise signed under its
+  product name and both ends of the connection check the identifier.
 - **`Perch.entitlements`**:
   `com.apple.security.temporary-exception.mach-lookup.global-name` listing
   `org.ahlab.Perch.helper`, so the sandboxed app can reach the helper. This
@@ -143,9 +170,10 @@ Left of the gear. `cup.and.saucer` when sleep is normal,
 
 | Situation | Behaviour |
 |---|---|
-| user has not approved the helper | `.needsApproval`; Settings opens; button unchanged |
+| helper not registered, or not yet approved | companion runs; `.needsApproval`; button unchanged |
 | user later removes approval | next toggle lands in `.needsApproval` again |
-| connection interrupted or invalidated | `.failed`; state re-read from the system |
+| registration fails outright | the companion shows an alert with the reason |
+| connection interrupted | treated as unreachable; companion runs, finds the helper enabled, and quits silently |
 | `pmset` exits non-zero | helper replies with its stderr; `.failed` |
 
 An updated Perch needs no re-registration. The launchd job names the helper
@@ -158,8 +186,9 @@ Unit tests, with a fake helper client and a fake reader:
 
 - toggle on and off updates `isSleepDisabled` from the reader, not the request
 - helper failure leaves the state as the system reports it and sets `.failed`
-- unregistered daemon that needs approval sets `.needsApproval` and makes no
-  helper call
+- an unreachable helper runs the companion once and sets `.needsApproval`
+- a helper that answers with an error does not run the companion
+- the click after approval succeeds
 - `refresh()` picks up a change made outside Perch
 - the helper builds exactly `["-a", "disablesleep", "1"]` and `"0"`
 

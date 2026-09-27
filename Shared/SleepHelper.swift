@@ -5,8 +5,10 @@ import Foundation
 enum SleepHelper {
     /// Also the launchd label.
     static let machServiceName = "org.ahlab.Perch.helper"
-    /// The file in `Contents/Library/LaunchDaemons`.
+    /// The file in the companion's `Contents/Library/LaunchDaemons`.
     static let daemonPlistName = "org.ahlab.Perch.helper.plist"
+    /// The app that registers the helper, relative to Perch's bundle.
+    static let companionPath = "Contents/Helpers/PerchKeepAwake.app"
 
     private static let team = "anchor apple generic and certificate leaf[subject.OU] = \"3U4384584Z\""
 
