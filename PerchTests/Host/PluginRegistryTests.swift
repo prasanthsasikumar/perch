@@ -63,10 +63,8 @@ final class PluginRegistryTests: XCTestCase {
         XCTAssertEqual(registry.enabled.map(\.id), ["alpha", "beta"])
     }
 
-    func testFirstEnabledIsActiveAndPrimaryByDefault() {
-        let registry = makeRegistry()
-        XCTAssertEqual(registry.active?.id, "alpha")
-        XCTAssertEqual(registry.primary?.id, "alpha")
+    func testFirstEnabledIsActiveByDefault() {
+        XCTAssertEqual(makeRegistry().active?.id, "alpha")
     }
 
     func testEntryCarriesMetadataFromThePlugin() {
@@ -90,30 +88,20 @@ final class PluginRegistryTests: XCTestCase {
         XCTAssertEqual(registry.active?.id, "alpha")
     }
 
-    func testDisablingThePrimaryPluginMovesPrimaryToTheFirstRemaining() {
-        let registry = makeRegistry()
-        registry.primaryID = "beta"
-        registry.setEnabled(false, for: "beta")
-        XCTAssertEqual(registry.primary?.id, "alpha")
-    }
-
-    func testDisablingEverythingLeavesNoActiveOrPrimary() {
+    func testDisablingEverythingLeavesNoActive() {
         let registry = makeRegistry()
         registry.setEnabled(false, for: "alpha")
         registry.setEnabled(false, for: "beta")
         XCTAssertNil(registry.active)
-        XCTAssertNil(registry.primary)
     }
 
     func testSelectionsPersistAcrossInstances() {
         let registry = makeRegistry()
         registry.setEnabled(false, for: "alpha")
-        registry.primaryID = "beta"
         registry.activeID = "beta"
 
         let reloaded = makeRegistry()
         XCTAssertEqual(reloaded.enabled.map(\.id), ["beta"])
-        XCTAssertEqual(reloaded.primary?.id, "beta")
         XCTAssertEqual(reloaded.active?.id, "beta")
     }
 
@@ -128,12 +116,17 @@ final class PluginRegistryTests: XCTestCase {
         suite.set(["alpha", "gamma"], forKey: "enabledPluginIDs")
         suite.set(["alpha", "beta", "gamma"], forKey: "seenPluginIDs")
         suite.set("gamma", forKey: "activePluginID")
-        suite.set("gamma", forKey: "primaryPluginID")
 
         let registry = makeRegistry()
         XCTAssertEqual(registry.enabled.map(\.id), ["alpha"])
         XCTAssertEqual(registry.active?.id, "alpha")
-        XCTAssertEqual(registry.primary?.id, "alpha")
+    }
+
+    /// The menu bar follows the selected tab; the old setting is dropped.
+    func testTheRetiredPrimaryKeyIsCleared() {
+        suite.set("beta", forKey: "primaryPluginID")
+        _ = makeRegistry()
+        XCTAssertNil(suite.string(forKey: "primaryPluginID"))
     }
 
     /// The upgrade path for shipping a new plugin. Without this, a build that

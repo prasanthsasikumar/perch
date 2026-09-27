@@ -12,15 +12,6 @@ struct GeneralSettingsView: View {
     var body: some View {
         Form {
             Section("Menu bar") {
-                Picker("Show in menu bar", selection: Binding(
-                    get: { registry.primary?.id ?? "" },
-                    set: { registry.primaryID = $0 }
-                )) {
-                    ForEach(registry.enabled) { entry in
-                        Text(entry.displayName).tag(entry.id)
-                    }
-                }
-                .disabled(registry.enabled.isEmpty)
                 Toggle("Show title in menu bar", isOn: $showTitleInMenuBar)
                 Stepper(
                     "Title length: \(titleTruncationLength) characters",

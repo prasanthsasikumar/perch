@@ -1,6 +1,6 @@
 import PerchKit
 
-/// Turns the primary plugin's contribution into what actually gets drawn,
+/// Turns the selected plugin's contribution into what actually gets drawn,
 /// applying the user's menu bar preferences.
 ///
 /// Kept separate from the view so the rules are testable: a plugin's label is
@@ -9,16 +9,16 @@ enum MenuBarLabelResolver {
     /// - Returns: the label to draw, or `nil` when no plugin contributed one —
     ///   in which case the caller falls back to Perch's own icon.
     static func resolve(
-        primary: MenuBarLabel?,
+        label: MenuBarLabel?,
         showTitle: Bool,
         truncationLength: Int
     ) -> MenuBarLabel? {
-        guard let primary else { return nil }
-        guard showTitle, let text = primary.text else {
-            return MenuBarLabel(systemImage: primary.systemImage, text: nil)
+        guard let label else { return nil }
+        guard showTitle, let text = label.text else {
+            return MenuBarLabel(systemImage: label.systemImage, text: nil)
         }
         return MenuBarLabel(
-            systemImage: primary.systemImage,
+            systemImage: label.systemImage,
             text: text.truncatedForMenuBar(to: truncationLength)
         )
     }
