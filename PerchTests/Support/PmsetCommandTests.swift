@@ -1,4 +1,5 @@
 @testable import Perch
+import Security
 import XCTest
 
 final class PmsetCommandTests: XCTestCase {
@@ -35,5 +36,36 @@ final class PmsetCommandTests: XCTestCase {
             XCTAssertTrue(requirement.contains("anchor apple generic"))
             XCTAssertTrue(requirement.contains("certificate leaf[subject.OU] = \"3U4384584Z\""))
         }
+    }
+
+    private func requirement(_ text: String) throws -> SecRequirement {
+        var requirement: SecRequirement?
+        let status = SecRequirementCreateWithString(text as CFString, [], &requirement)
+        XCTAssertEqual(status, errSecSuccess, "does not parse: \(text)")
+        return try XCTUnwrap(requirement)
+    }
+
+    func testRequirementsParse() throws {
+        _ = try requirement(SleepHelper.clientRequirement)
+        _ = try requirement(SleepHelper.helperRequirement)
+    }
+
+    /// The tests run inside Perch, so Perch itself is the client to check.
+    func testPerchSatisfiesTheClientRequirement() throws {
+        var code: SecCode?
+        XCTAssertEqual(SecCodeCopySelf([], &code), errSecSuccess)
+        let status = SecCodeCheckValidity(
+            try XCTUnwrap(code), [], try requirement(SleepHelper.clientRequirement)
+        )
+        XCTAssertEqual(status, errSecSuccess)
+    }
+
+    func testPerchDoesNotPassForTheHelper() throws {
+        var code: SecCode?
+        XCTAssertEqual(SecCodeCopySelf([], &code), errSecSuccess)
+        let status = SecCodeCheckValidity(
+            try XCTUnwrap(code), [], try requirement(SleepHelper.helperRequirement)
+        )
+        XCTAssertNotEqual(status, errSecSuccess)
     }
 }

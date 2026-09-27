@@ -115,10 +115,11 @@ final class SleepControllerTests: XCTestCase {
 
         await controller.toggle()
 
+        XCTAssertEqual(helper.calls, [true, true])
         XCTAssertEqual(installer.installs, 1)
         XCTAssertEqual(controller.status, .needsApproval)
         XCTAssertFalse(controller.isSleepDisabled)
-        XCTAssertEqual(controller.tooltip, "Allow Perch Keep Awake in System Settings → Login Items, then click again")
+        XCTAssertEqual(controller.tooltip, "Click again. If nothing changes, allow Perch Keep Awake in System Settings → Login Items")
     }
 
     /// The helper exits when idle. A click that lands as it is exiting loses
@@ -133,6 +134,26 @@ final class SleepControllerTests: XCTestCase {
         XCTAssertEqual(installer.installs, 0)
         XCTAssertEqual(controller.status, .ready)
         XCTAssertTrue(controller.isSleepDisabled)
+    }
+
+    func testNotBusyAfterAFailure() async {
+        helper.error = SleepHelperFailure.rejected("no")
+        let controller = makeController()
+
+        await controller.toggle()
+
+        XCTAssertFalse(controller.isBusy)
+    }
+
+    func testUnreachableThenRejectedIsAFailureNotAnInstall() async {
+        helper.errorOnce = SleepHelperFailure.unreachable("interrupted")
+        helper.error = SleepHelperFailure.rejected("pmset exited with status 71")
+        let controller = makeController()
+
+        await controller.toggle()
+
+        XCTAssertEqual(installer.installs, 0)
+        XCTAssertEqual(controller.status, .failed("pmset exited with status 71"))
     }
 
     func testWorksOnTheClickAfterApproval() async {

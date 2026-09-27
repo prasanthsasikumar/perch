@@ -3,28 +3,17 @@ import Foundation
 /// Perch's root helper. Started by launchd when Perch connects, does one
 /// thing, and exits once nobody has asked for anything in a while.
 
-/// Exits the process after a quiet spell, so nothing root stays resident.
-final class IdleExit {
-    private let delay: TimeInterval = 10
-    private var pending: DispatchWorkItem?
-
-    func touch() {
-        pending?.cancel()
-        let item = DispatchWorkItem { exit(EXIT_SUCCESS) }
-        pending = item
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: item)
-    }
-}
-
 final class HelperService: NSObject, SleepHelperProtocol {
-    private let onRequest: () -> Void
+    private let idle: IdleExit
 
-    init(onRequest: @escaping () -> Void) {
-        self.onRequest = onRequest
+    init(idle: IdleExit) {
+        self.idle = idle
     }
 
     func setSleepDisabled(_ disabled: Bool, reply: @escaping (String?) -> Void) {
-        DispatchQueue.main.async(execute: onRequest)
+        // Held for the whole call, so the helper cannot exit under it.
+        DispatchQueue.main.sync { idle.begin() }
+        defer { DispatchQueue.main.async { [idle] in idle.end() } }
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: PmsetCommand.executable)
@@ -54,11 +43,11 @@ final class HelperService: NSObject, SleepHelperProtocol {
 }
 
 final class ListenerDelegate: NSObject, NSXPCListenerDelegate {
-    let idle = IdleExit()
+    let idle = IdleExit(delay: 10) { exit(EXIT_SUCCESS) }
 
     func listener(_ listener: NSXPCListener, shouldAcceptNewConnection connection: NSXPCConnection) -> Bool {
         connection.exportedInterface = NSXPCInterface(with: SleepHelperProtocol.self)
-        connection.exportedObject = HelperService(onRequest: { [idle] in idle.touch() })
+        connection.exportedObject = HelperService(idle: idle)
         connection.resume()
         DispatchQueue.main.async { [idle] in idle.touch() }
         return true

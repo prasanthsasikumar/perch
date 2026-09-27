@@ -34,8 +34,10 @@ click.
 
 So the helper belongs to a companion app, `PerchKeepAwake.app`, inside
 Perch's bundle. It is not sandboxed. It registers the helper, opens Login
-Items if approval is needed, shows an alert if registration fails outright,
-and quits. It has no window and no Dock icon.
+Items if approval is needed, explains itself in an alert in every other case,
+and quits. It has no window and no Dock icon. It never quits without
+sending the user somewhere, because Perch only runs it when something is
+wrong.
 
 Dropping Perch's sandbox instead was rejected: it would move every plugin's
 stored data out of the container.
@@ -54,7 +56,7 @@ closing the lid causes. `disablesleep` is the setting that does.
 |---|---|---|
 | `PerchKeepAwake` | new app target `PerchKeepAwake/`, embedded in `Perch.app/Contents/Helpers` | registers the helper, then quits |
 | `PerchHelper` | new command-line target `PerchHelper/`, embedded in the companion | root LaunchDaemon; runs `pmset` |
-| `SleepHelperProtocol` | `Shared/SleepHelperProtocol.swift`, compiled into both targets | the XPC interface |
+| `SleepHelperProtocol` | `Shared/SleepHelper.swift`, compiled into all three targets | the XPC interface |
 | `SleepStateReader` | `Perch/Support/` | reads the current setting |
 | `SleepController` | `Perch/Support/` | observable state; calls the helper, runs the companion when it cannot |
 | footer button | `Perch/Host/PanelFooter.swift` | the control |
@@ -74,7 +76,8 @@ Perch.app/Contents/Helpers/PerchKeepAwake.app/
 The launchd plist names the binary with `BundleProgram`, declares the mach
 service `org.ahlab.Perch.helper`, and has no `KeepAlive` or `RunAtLoad`:
 launchd starts the helper when Perch connects, and the helper exits after
-being idle for a few seconds. Nothing stays resident.
+being idle for ten seconds, never while a call is in flight. Nothing stays
+resident.
 
 ### The XPC interface
 
@@ -144,7 +147,7 @@ Left of the gear. `cup.and.saucer` when sleep is normal,
 |---|---|
 | off | Keep awake with lid closed |
 | on | Staying awake with lid closed |
-| needs approval | Allow Perch Keep Awake in System Settings → Login Items, then click again |
+| needs approval | Click again. If nothing changes, allow Perch Keep Awake in System Settings → Login Items |
 | failed | the helper's message |
 
 ## Changes outside new code
@@ -172,9 +175,9 @@ Left of the gear. `cup.and.saucer` when sleep is normal,
 |---|---|
 | helper not registered, or not yet approved | companion runs; `.needsApproval`; button unchanged |
 | user later removes approval | next toggle lands in `.needsApproval` again |
-| registration fails outright | the companion shows an alert with the reason |
+| helper switched off in Login Items | registering is refused; the companion says so and offers to open Login Items |
 | helper caught exiting from idle | the call is tried once more; launchd starts a fresh helper |
-| still unreachable after the second try | companion runs; if the helper is in fact enabled it quits silently |
+| allowed, but still unreachable after the second try | the companion says so and offers to open Login Items. It never unregisters to repair: macOS then marks the helper disabled |
 | `pmset` exits non-zero | helper replies with its stderr; `.failed` |
 
 An updated Perch needs no re-registration. The launchd job names the helper

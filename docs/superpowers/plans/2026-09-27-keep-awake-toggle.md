@@ -28,8 +28,8 @@ The spec's "Who registers the helper" section has the reasoning.
   An unreachable helper runs the installer; a rejection is reported.
 - `SleepController.init(reader:helper:installer:)`. `refresh()` only re-reads
   the setting.
-- The approval tooltip is "Allow Perch Keep Awake in System Settings → Login
-  Items, then click again".
+- The approval tooltip is "Click again. If nothing changes, allow Perch Keep Awake in System
+  Settings → Login Items".
 - Review Focus 2 and 3 no longer apply as written: Perch cannot see
   registration state. Their replacements are `testWorksOnTheClickAfterApproval`
   and the companion's alert.

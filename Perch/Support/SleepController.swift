@@ -41,7 +41,7 @@ final class SleepController {
     var tooltip: String {
         switch status {
         case .needsApproval:
-            "Allow Perch Keep Awake in System Settings → Login Items, then click again"
+            "Click again. If nothing changes, allow Perch Keep Awake in System Settings → Login Items"
         case .failed(let message):
             message
         case .ready:
