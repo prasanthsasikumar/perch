@@ -24,7 +24,7 @@ what's already there.
   </tr>
 </table>
 
-Whichever plugin you make primary owns the menu bar item — here Tasks, showing
+The menu bar item shows whichever tab you last selected — here Tasks, showing
 the current task:
 
 <img src="docs/screenshots/menubar.png" width="90" alt="The menu bar item: a checkmark icon followed by the current task's title">
@@ -207,7 +207,7 @@ Click the gear icon in the panel.
 
 | Pane | What's in it |
 |---|---|
-| General | Which plugin owns the menu bar, title display and length, launch at login, global hotkey |
+| General | Title display and length, launch at login, global hotkey |
 | Plugins | Enable or disable each plugin, and see what each one can access |
 | Tasks | Per-plugin settings, when a plugin has any |
 | Analytics | Service-account key, watched properties, which one is primary |

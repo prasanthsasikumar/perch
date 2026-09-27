@@ -5,13 +5,13 @@ import XCTest
 final class MenuBarLabelResolverTests: XCTestCase {
     func testNoContributedLabelResolvesToNil() {
         XCTAssertNil(
-            MenuBarLabelResolver.resolve(primary: nil, showTitle: true, truncationLength: 30)
+            MenuBarLabelResolver.resolve(label: nil, showTitle: true, truncationLength: 30)
         )
     }
 
     func testTitleIsDroppedWhenTheUserAsksForIconOnly() {
         let resolved = MenuBarLabelResolver.resolve(
-            primary: MenuBarLabel(systemImage: "checkmark.circle", text: "Buy milk"),
+            label: MenuBarLabel(systemImage: "checkmark.circle", text: "Buy milk"),
             showTitle: false,
             truncationLength: 30
         )
@@ -21,7 +21,7 @@ final class MenuBarLabelResolverTests: XCTestCase {
 
     func testShortTitlePassesThrough() {
         let resolved = MenuBarLabelResolver.resolve(
-            primary: MenuBarLabel(systemImage: "checkmark.circle", text: "Buy milk"),
+            label: MenuBarLabel(systemImage: "checkmark.circle", text: "Buy milk"),
             showTitle: true,
             truncationLength: 30
         )
@@ -30,7 +30,7 @@ final class MenuBarLabelResolverTests: XCTestCase {
 
     func testLongTitleIsTruncated() {
         let resolved = MenuBarLabelResolver.resolve(
-            primary: MenuBarLabel(systemImage: "checkmark.circle", text: "abcdefghij"),
+            label: MenuBarLabel(systemImage: "checkmark.circle", text: "abcdefghij"),
             showTitle: true,
             truncationLength: 5
         )
@@ -39,7 +39,7 @@ final class MenuBarLabelResolverTests: XCTestCase {
 
     func testAPluginWithNoTextKeepsItsIcon() {
         let resolved = MenuBarLabelResolver.resolve(
-            primary: MenuBarLabel(systemImage: "checkmark.circle", text: nil),
+            label: MenuBarLabel(systemImage: "checkmark.circle", text: nil),
             showTitle: true,
             truncationLength: 30
         )

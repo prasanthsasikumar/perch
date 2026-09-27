@@ -71,7 +71,7 @@ struct PerchApp: App {
         } label: {
             menuBarContent(
                 MenuBarLabelResolver.resolve(
-                    primary: registry.primary?.plugin.menuBarLabel,
+                    label: registry.active?.plugin.menuBarLabel,
                     showTitle: showTitleInMenuBar,
                     truncationLength: titleTruncationLength
                 )

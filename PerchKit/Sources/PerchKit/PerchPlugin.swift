@@ -32,7 +32,8 @@ public protocol PerchPlugin: AnyObject, Observable {
     var panel: AnyView { get }
     /// This plugin's pane in the Settings window. Default: nothing.
     var settings: AnyView { get }
-    /// What to show in the menu bar when this plugin is primary. Default: nothing.
+    /// What to show in the menu bar while this plugin's tab is selected.
+    /// Default: nothing, and Perch shows its own icon.
     var menuBarLabel: MenuBarLabel? { get }
     /// Buttons contributed to the left of the panel footer. Default: none.
     var footerActions: [PluginAction] { get }
