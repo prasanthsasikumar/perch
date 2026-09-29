@@ -114,6 +114,7 @@ public final class FacebookSession: NSObject {
         hiddenWindow.setContentSize(NSSize(width: 1024, height: 800))
         hiddenWindow.center()
         hiddenWindow.title = "Sign in to Facebook"
+        hiddenWindow.collectionBehavior = .managed
         hiddenWindow.makeKeyAndOrderFront(nil)
         // Perch is LSUIElement, so this is what actually brings the window
         // forward; without it it opens behind whatever the user is using.
@@ -125,6 +126,7 @@ public final class FacebookSession: NSObject {
     public func dismissSignIn() {
         hiddenWindow.orderOut(nil)
         hiddenWindow.setFrameOrigin(NSPoint(x: -10_000, y: -10_000))
+        hiddenWindow.collectionBehavior = ParkedWindow.parkedBehavior
         isShowingSignIn = false
     }
 

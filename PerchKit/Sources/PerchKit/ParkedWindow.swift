@@ -13,7 +13,16 @@ import AppKit
 /// that. A plugin that wants the window seen (a sign-in flow) still gets to
 /// `center()` it and bring it forward; nothing here stops a deliberate
 /// placement.
+///
+/// A parked window is also kept out of Mission Control and the window
+/// cycle. Mission Control lays every normal window out by where it really
+/// is, so one 10,000 points away makes it zoom out until the user's own
+/// windows shrink to nothing. A plugin that shows the window for real
+/// sets `collectionBehavior` to `.managed` while it is up, and back to
+/// `ParkedWindow.parkedBehavior` when it parks it again.
 public final class ParkedWindow: NSWindow {
+    public static let parkedBehavior: NSWindow.CollectionBehavior = [.transient, .ignoresCycle]
+
     override public init(
         contentRect: NSRect,
         styleMask style: NSWindow.StyleMask,
@@ -22,6 +31,7 @@ public final class ParkedWindow: NSWindow {
     ) {
         super.init(contentRect: contentRect, styleMask: style, backing: backingStoreType, defer: flag)
         setFrame(frameRect(forContentRect: contentRect), display: false)
+        collectionBehavior = Self.parkedBehavior
     }
 
     override public func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {

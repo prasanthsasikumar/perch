@@ -32,6 +32,15 @@ final class ParkedWindowTests: XCTestCase {
         XCTAssertEqual(window.frame.origin.y, offscreen.origin.y)
     }
 
+    /// Mission Control lays windows out where they really are; a normal
+    /// window 10,000 points away makes it shrink every other window away.
+    func testAParkedWindowStaysOutOfMissionControl() {
+        let window = makeWindow(ParkedWindow.self)
+
+        XCTAssertTrue(window.collectionBehavior.contains(.transient))
+        XCTAssertFalse(window.collectionBehavior.contains(.managed))
+    }
+
     /// Bringing it on screen on purpose still works — the sign-in flow
     /// depends on it.
     func testAParkedWindowCanStillBeCentered() throws {
