@@ -10,6 +10,21 @@ watches the health of machines you run; and **Internet**, which tells you
 whether your connection is actually working. More can be added without disturbing
 what's already there.
 
+<p align="center">
+  <img src="docs/demo/tasks.gif" width="720" alt="Adding a task, dragging it to the top so it shows in the menu bar, then ticking it off">
+</p>
+
+<p align="center">
+  <a href="docs/demo/perch-demo.mp4"><b>▶ Watch the 47-second demo, with sound</b></a>
+</p>
+
+Every plugin is a tab in the same panel, and the menu bar shows whichever tab
+you picked:
+
+<p align="center">
+  <img src="docs/demo/tour.gif" width="720" alt="Switching between the Analytics, Market, Busy, Server and Internet tabs, with the menu bar item changing to match">
+</p>
+
 <table>
   <tr>
     <td align="center"><img src="docs/screenshots/tasks.png" width="300" alt="The Tasks tab: a todo list with the current task first"><br><sub><b>Tasks</b></sub></td>
@@ -245,6 +260,10 @@ is stripped out before the address is stored.
 
 The cup in the panel's footer keeps your Mac awake when the lid is closed. It
 is the same setting as `sudo pmset -a disablesleep 1`, without the Terminal.
+
+<p align="center">
+  <img src="docs/demo/awake.gif" width="560" alt="Clicking the cup in the panel footer to keep the Mac awake, then clicking it again to turn it off">
+</p>
 
 - **One approval, once.** The setting needs root, so Perch ships a small
   helper. The first click opens System Settings → Login Items; allow **Perch
