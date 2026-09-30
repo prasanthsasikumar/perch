@@ -10,12 +10,14 @@ public enum PluginCapability: String, CaseIterable, Sendable {
     case credentials
     case network
     case notifications
+    case downloads
 
     public var disclosure: String {
         switch self {
         case .credentials: "Stores an account credential"
         case .network: "Connects to the internet"
         case .notifications: "Sends notifications"
+        case .downloads: "Saves files to your Downloads folder"
         }
     }
 }

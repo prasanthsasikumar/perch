@@ -17,6 +17,10 @@ final class PluginCapabilityTests: XCTestCase {
             Set([PluginCapability.notifications]).disclosureLines,
             ["Sends notifications"]
         )
+        XCTAssertEqual(
+            Set([PluginCapability.downloads]).disclosureLines,
+            ["Saves files to your Downloads folder"]
+        )
     }
 
     func testMultipleCapabilitiesAreOrderedDeterministically() {

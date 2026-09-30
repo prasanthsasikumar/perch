@@ -7,7 +7,8 @@ todo list with the current task in the menu bar; **Analytics**, which puts your 
 numbers a click away; **Market**, which watches Facebook Marketplace searches;
 **Busy**, which shows how busy a place is right now; **Server**, which
 watches the health of machines you run; and **Internet**, which tells you
-whether your connection is actually working. More can be added without disturbing
+whether your connection is actually working; and **Download**, which saves a
+video or its audio from a pasted link. More can be added without disturbing
 what's already there.
 
 <p align="center">
@@ -196,6 +197,36 @@ browser to find out.
 
 Internet declares `network`: while enabled it sends three small HTTPS requests
 every 30 seconds, and checks again straight away when you change networks.
+
+### Download
+
+Paste a link, get the video as MP4 or its audio as MP3 in your Downloads
+folder. Works with YouTube, TikTok, Instagram, X, Vimeo, SoundCloud and the
+other sites [yt-dlp supports](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md).
+Inspired by [ReClip](https://github.com/averygan/reclip), without the local web
+server.
+
+- **Paste and go.** Paste one link or several at once. Each is looked up and
+  shows its thumbnail, title and length. Duplicates are skipped.
+- **MP4 or MP3.** Pick a resolution for video, or leave it on Best.
+  *Download all* starts every link that's ready.
+- **Progress in the menu bar.** You can close the panel while a long download
+  runs. Cancel or retry from the row.
+- **Recent files.** The last files it saved, to open or show in Finder.
+
+It needs yt-dlp and ffmpeg from Homebrew:
+
+```bash
+brew install yt-dlp ffmpeg
+```
+
+They aren't bundled because sites break yt-dlp every few weeks and yt-dlp
+ships fixes just as often. `brew upgrade` keeps your copy current without
+waiting for a Perch release.
+
+Download declares `network` and `downloads`. It reaches only the sites you
+paste links to, and it writes only to `~/Downloads`. Perch's sandbox can read
+Homebrew's folders (`/opt/homebrew`, `/usr/local`) so it can run the tools.
 
 ## Settings
 

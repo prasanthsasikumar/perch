@@ -1,6 +1,7 @@
 import AnalyticsPlugin
 import AppKit
 import BusyPlugin
+import DownloadPlugin
 import InternetPlugin
 import MarketPlugin
 import MenuBarExtraAccess
@@ -49,6 +50,7 @@ struct PerchApp: App {
             Busy(context: .perch(Busy.identifier)),
             Server(context: .perch(Server.identifier)),
             Internet(context: .perch(Internet.identifier)),
+            Download(context: .perch(Download.identifier)),
         ]
     }
 

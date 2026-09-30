@@ -24,6 +24,8 @@ packages:
     path: Plugins/ServerPlugin
   InternetPlugin:
     path: Plugins/InternetPlugin
+  DownloadPlugin:
+    path: Plugins/DownloadPlugin
 targets:
   Perch:
     type: application
@@ -56,6 +58,8 @@ targets:
         product: ServerPlugin
       - package: InternetPlugin
         product: InternetPlugin
+      - package: DownloadPlugin
+        product: DownloadPlugin
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.ahlab.Perch
@@ -223,3 +227,5 @@ targets:
         product: ServerPlugin
       - package: InternetPlugin
         product: InternetPlugin
+      - package: DownloadPlugin
+        product: DownloadPlugin
