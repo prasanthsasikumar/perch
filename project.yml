@@ -26,6 +26,8 @@ packages:
     path: Plugins/InternetPlugin
   DownloadPlugin:
     path: Plugins/DownloadPlugin
+  TapPlugin:
+    path: Plugins/TapPlugin
 targets:
   Perch:
     type: application
@@ -37,6 +39,12 @@ targets:
         buildPhase: resources
     dependencies:
       - target: PerchKeepAwake
+        embed: true
+        codeSign: false
+        copy:
+          destination: wrapper
+          subpath: Contents/Helpers
+      - target: PerchTap
         embed: true
         codeSign: false
         copy:
@@ -60,6 +68,8 @@ targets:
         product: InternetPlugin
       - package: DownloadPlugin
         product: DownloadPlugin
+      - package: TapPlugin
+        product: TapPlugin
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.ahlab.Perch
@@ -156,6 +166,57 @@ targets:
         CFBundleShortVersionString: "2.5.0"
         CFBundleVersion: "9"
         NSHumanReadableCopyright: "© 2026 Prasanth Sasikumar"
+  # The Tap plugin's engine: reads the motion sensor, classifies knocks and
+  # runs what they map to. Not sandboxed — waking the sensor, typing into
+  # other apps and running the user's shell commands are all things the
+  # sandbox refuses (TapLink in TapKit has the details). Perch starts it while
+  # the plugin is on, and it quits when Perch does.
+  PerchTap:
+    type: application
+    platform: macOS
+    sources:
+      - path: PerchTap
+        excludes:
+          - "*.entitlements"
+    dependencies:
+      - package: TapPlugin
+        product: TapKit
+    settings:
+      base:
+        PRODUCT_NAME: PerchTap
+        PRODUCT_BUNDLE_IDENTIFIER: org.ahlab.Perch.tap
+        CODE_SIGN_ENTITLEMENTS: PerchTap/PerchTap.entitlements
+        MARKETING_VERSION: "2.5.0"
+        CURRENT_PROJECT_VERSION: "9"
+        SKIP_INSTALL: YES
+      configs:
+        # Signed with the same stable identity as Perch, for the same reason:
+        # Accessibility is granted to an exact signature, and an ad-hoc one
+        # changes on every build.
+        Debug:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: "Apple Development: Prasanth Sasikumar (5AD8QG2238)"
+          DEVELOPMENT_TEAM: 3U4384584Z
+          PROVISIONING_PROFILE_SPECIFIER: ""
+        Release:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: "Developer ID Application: FLOWXR PTE. LTD. (3U4384584Z)"
+          DEVELOPMENT_TEAM: 3U4384584Z
+          ENABLE_HARDENED_RUNTIME: YES
+          CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+          OTHER_CODE_SIGN_FLAGS: "--timestamp"
+    info:
+      path: PerchTap/Info.plist
+      properties:
+        LSUIElement: true
+        CFBundleDisplayName: Perch Tap
+        CFBundleShortVersionString: "2.5.0"
+        CFBundleVersion: "9"
+        NSHumanReadableCopyright: "© 2026 Prasanth Sasikumar. Knock detection ported from MacTap, © 2026 Jaskirat Singh, MIT License."
+        NSAccessibilityUsageDescription: "Perch Tap sends the keyboard shortcut or media key a knock is mapped to."
+        NSAppleEventsUsageDescription: "Perch Tap asks System Events to type the shortcut a knock is mapped to, and runs your AppleScript actions."
+        NSInputMonitoringUsageDescription: "Perch Tap can notice typing so knocks are ignored while you type. Optional — Accessibility already covers this."
+        NSMotionUsageDescription: "Perch Tap reads the MacBook's built-in motion sensor to feel knocks on the chassis."
   # The root helper behind the keep-awake toggle. Registered with
   # SMAppService.daemon by PerchKeepAwake and run by launchd, never launched directly.
   PerchHelper:
@@ -229,3 +290,5 @@ targets:
         product: InternetPlugin
       - package: DownloadPlugin
         product: DownloadPlugin
+      - package: TapPlugin
+        product: TapPlugin

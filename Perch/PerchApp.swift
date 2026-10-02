@@ -9,6 +9,7 @@ import TasksPlugin
 import PerchKit
 import ServerPlugin
 import SwiftUI
+import TapPlugin
 
 extension PluginContext {
     /// Every plugin context in Perch is built here, so "where does plugin X
@@ -51,6 +52,7 @@ struct PerchApp: App {
             Server(context: .perch(Server.identifier)),
             Internet(context: .perch(Internet.identifier)),
             Download(context: .perch(Download.identifier)),
+            Tap(context: .perch(Tap.identifier)),
         ]
     }
 

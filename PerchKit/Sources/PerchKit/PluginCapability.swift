@@ -11,6 +11,7 @@ public enum PluginCapability: String, CaseIterable, Sendable {
     case network
     case notifications
     case downloads
+    case accessibility
 
     public var disclosure: String {
         switch self {
@@ -18,6 +19,7 @@ public enum PluginCapability: String, CaseIterable, Sendable {
         case .network: "Connects to the internet"
         case .notifications: "Sends notifications"
         case .downloads: "Saves files to your Downloads folder"
+        case .accessibility: "Types shortcuts and runs actions in other apps"
         }
     }
 }

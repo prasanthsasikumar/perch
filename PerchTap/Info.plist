@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Perch Keep Awake</string>
+	<string>Perch Tap</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -22,7 +22,15 @@
 	<string>9</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>NSAccessibilityUsageDescription</key>
+	<string>Perch Tap sends the keyboard shortcut or media key a knock is mapped to.</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Perch Tap asks System Events to type the shortcut a knock is mapped to, and runs your AppleScript actions.</string>
 	<key>NSHumanReadableCopyright</key>
-	<string>© 2026 Prasanth Sasikumar</string>
+	<string>© 2026 Prasanth Sasikumar. Knock detection ported from MacTap, © 2026 Jaskirat Singh, MIT License.</string>
+	<key>NSInputMonitoringUsageDescription</key>
+	<string>Perch Tap can notice typing so knocks are ignored while you type. Optional — Accessibility already covers this.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>Perch Tap reads the MacBook's built-in motion sensor to feel knocks on the chassis.</string>
 </dict>
 </plist>

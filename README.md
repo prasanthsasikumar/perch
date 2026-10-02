@@ -7,9 +7,10 @@ todo list with the current task in the menu bar; **Analytics**, which puts your 
 numbers a click away; **Market**, which watches Facebook Marketplace searches;
 **Busy**, which shows how busy a place is right now; **Server**, which
 watches the health of machines you run; and **Internet**, which tells you
-whether your connection is actually working; and **Download**, which saves a
-video or its audio from a pasted link. More can be added without disturbing
-what's already there.
+whether your connection is actually working; **Download**, which saves a
+video or its audio from a pasted link; and **Tap**, which runs a shortcut when
+you knock on your MacBook. More can be added without disturbing what's
+already there.
 
 <p align="center">
   <img src="docs/demo/tasks.gif" width="720" alt="Adding a task, dragging it to the top so it shows in the menu bar, then ticking it off">
@@ -228,6 +229,47 @@ Download declares `network` and `downloads`. It reaches only the sites you
 paste links to, and it writes only to `~/Downloads`. Perch's sandbox can read
 Homebrew's folders (`/opt/homebrew`, `/usr/local`) so it can run the tools.
 
+### Tap
+
+Knock on your MacBook — the chassis, or the desk under it — once, twice or
+three times, and it runs a shortcut: copy, paste, accept an AI suggestion,
+play/pause, a screenshot, or whatever you map. Ported from
+[MacTap](https://github.com/jaskirat1616/mactap-app) by Jaskirat Singh (MIT).
+
+- **Anywhere, or left and right.** Three knocks anywhere, or six with each
+  edge doing something different. Calibrate the sides if they feel swapped.
+- **Presets.** Daily, Coding, Capture, Media and Focus, or your own mix of 41
+  actions: editing, screenshots, media keys, lock, Mission Control, window
+  tiling, dark mode, dictation, and custom ones — a keyboard shortcut, an app,
+  a URL, a Shortcuts shortcut, AppleScript or a shell command.
+- **Per app.** Cursor and Claude come set up so a knock accepts and a double
+  knock rejects; add any running app and override only the knocks you want.
+- **Ignores your typing.** Knocks are paused for a moment after any key press,
+  and a burst of impulses reads as typing, not knocking.
+- **Overlay and sounds.** A small confirmation shows what ran. Optionally, a
+  synthesized sound per knock from ten packs, panned to the side you hit.
+- **See what the sensor sees.** The panel has the live waveform; Settings →
+  Tap → Sensor has every axis, the noise floor, and why the last bump was
+  rejected.
+
+It needs a MacBook whose motion sensor macOS exposes: **M2 or later**, or
+**M1 Pro / Max / Ultra**. The original M1 MacBook Air doesn't, and Tap says so.
+
+The first time, the panel walks you through one permission and a test knock.
+Nothing listens until you have finished that.
+
+**Why there's a second app.** Tap's work happens in **PerchTap**, inside
+`Perch.app/Contents/Helpers`. Perch is sandboxed, and the sandbox refuses three
+things Tap needs: waking the motion sensor when macOS parks it, typing into
+other apps, and running your shell commands. PerchTap is not sandboxed, has no
+window of its own, runs only while the plugin is on, and quits when Perch does.
+Accessibility and Automation are granted to it, not to Perch. It reads Tap's
+settings from Perch's container and never writes them; Perch tells it what to
+do with a handful of commands, none of which can carry a script.
+
+Tap declares `accessibility`. It classifies knocks on your Mac and sends
+nothing anywhere.
+
 ## Settings
 
 Click the gear icon in the panel.
@@ -240,6 +282,7 @@ Click the gear icon in the panel.
 | Analytics | Service-account key, watched properties, which one is primary |
 | Market | City, search radius, how often to check |
 | Busy | How often to check |
+| Tap | Detection, sensitivity and timing; the gesture map, presets and per-app actions; the live sensor; sounds; permissions |
 
 ## Your data
 
@@ -319,6 +362,9 @@ Plugins/AnalyticsPlugin/ The Analytics plugin: GA4 client, auth, store, views
 Plugins/MarketPlugin/    The Market plugin: Marketplace scraping, poller, store, views
 Plugins/BusyPlugin/      The Busy plugin: Google popular-times scraping, store, views
 Plugins/ServerPlugin/    The Server plugin: vpsstat agent client, alert rules, store, views
+Plugins/TapPlugin/       The Tap plugin, and TapKit: the gesture map, knock classifier,
+                         sounds, and the messages Perch and PerchTap exchange
+PerchTap/                Tap's unsandboxed companion: motion sensor, actions, overlay
 PerchKeepAwake/          The companion app that registers the keep-awake helper
 PerchHelper/             The root helper behind the keep-awake toggle
 Shared/                  What the app, the companion and the helper all compile
@@ -346,4 +392,7 @@ shape is right. Plugins are compiled in rather than loaded at runtime.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE). Tap's knock detection, actions and sounds are
+ported from [MacTap](https://github.com/jaskirat1616/mactap-app), © 2026
+Jaskirat Singh, MIT; its notice is in
+[Plugins/TapPlugin/LICENSE-MacTap](Plugins/TapPlugin/LICENSE-MacTap).

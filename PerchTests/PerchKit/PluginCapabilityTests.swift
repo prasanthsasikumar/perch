@@ -21,6 +21,10 @@ final class PluginCapabilityTests: XCTestCase {
             Set([PluginCapability.downloads]).disclosureLines,
             ["Saves files to your Downloads folder"]
         )
+        XCTAssertEqual(
+            Set([PluginCapability.accessibility]).disclosureLines,
+            ["Types shortcuts and runs actions in other apps"]
+        )
     }
 
     func testMultipleCapabilitiesAreOrderedDeterministically() {
