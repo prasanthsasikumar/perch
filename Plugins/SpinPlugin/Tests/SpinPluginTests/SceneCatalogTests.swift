@@ -1,4 +1,5 @@
 @testable import SpinPlugin
+import AppKit
 import XCTest
 
 final class SceneCatalogTests: XCTestCase {
@@ -44,5 +45,14 @@ final class SceneCatalogTests: XCTestCase {
     func testTonearmIsOptional() throws {
         try write("a", order: 1)
         XCTAssertNil(SceneCatalog.load(from: root).first?.descriptor.tonearm)
+    }
+
+    func testBuiltInScenesShipAndDecode() {
+        let scenes = SceneCatalog.builtIn
+        XCTAssertEqual(scenes.map(\.id), ["listening-room", "after-hours"])
+        for scene in scenes {
+            XCTAssertNotNil(NSImage(contentsOf: scene.backgroundURL), scene.id)
+            XCTAssertNotNil(NSImage(contentsOf: scene.thumbnailURL), scene.id)
+        }
     }
 }

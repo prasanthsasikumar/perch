@@ -40,13 +40,19 @@ final class FakeArtwork: ArtworkProviding, @unchecked Sendable {
     }
 }
 
+/// Locked, because the model asks for both players from concurrent tasks.
 final class FakeQuery: PlayerQuerying, @unchecked Sendable {
+    private let lock = NSLock()
     var events: [Player: PlayerEvent] = [:]
-    private(set) var asked: [Player] = []
+    private var _asked: [Player] = []
+
+    var asked: [Player] { lock.withLock { _asked } }
 
     func event(for player: Player) async -> PlayerEvent? {
-        asked.append(player)
-        return events[player]
+        lock.withLock {
+            _asked.append(player)
+            return events[player]
+        }
     }
 }
 

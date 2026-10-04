@@ -1,0 +1,7 @@
+{
+  "id": "listening-room",
+  "name": "Listening Room",
+  "order": 1,
+  "platter": { "x": 0.541, "y": 0.658, "radius": 0.108, "squash": 0.36 },
+  "sleeve": { "x": 0.288, "y": 0.418, "size": 0.19, "rotation": 0, "style": "stand" }
+}
