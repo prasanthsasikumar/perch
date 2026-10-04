@@ -8,6 +8,7 @@ import MenuBarExtraAccess
 import TasksPlugin
 import PerchKit
 import ServerPlugin
+import SpinPlugin
 import SwiftUI
 import TapPlugin
 
@@ -53,6 +54,7 @@ struct PerchApp: App {
             Internet(context: .perch(Internet.identifier)),
             Download(context: .perch(Download.identifier)),
             Tap(context: .perch(Tap.identifier)),
+            Spin(context: .perch(Spin.identifier)),
         ]
     }
 

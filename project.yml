@@ -28,6 +28,8 @@ packages:
     path: Plugins/DownloadPlugin
   TapPlugin:
     path: Plugins/TapPlugin
+  SpinPlugin:
+    path: Plugins/SpinPlugin
 targets:
   Perch:
     type: application
@@ -70,6 +72,8 @@ targets:
         product: DownloadPlugin
       - package: TapPlugin
         product: TapPlugin
+      - package: SpinPlugin
+        product: SpinPlugin
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.ahlab.Perch
@@ -116,6 +120,7 @@ targets:
         LSApplicationCategoryType: public.app-category.productivity
         ITSAppUsesNonExemptEncryption: false
         NSHumanReadableCopyright: "© 2026 Prasanth Sasikumar"
+        NSAppleEventsUsageDescription: "Spin reads the current track and its album art from Spotify and Music to draw them on your desktop."
     scheme:
       testTargets: [PerchTests]
   # Registers the root helper, then quits. Perch cannot do this itself: it is
@@ -292,3 +297,5 @@ targets:
         product: DownloadPlugin
       - package: TapPlugin
         product: TapPlugin
+      - package: SpinPlugin
+        product: SpinPlugin
