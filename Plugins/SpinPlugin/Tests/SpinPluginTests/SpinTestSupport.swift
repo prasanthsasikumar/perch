@@ -29,3 +29,29 @@ func pngData(size: Int) -> Data {
 func makeTrack(_ id: String, _ player: Player = .spotify) -> Track {
     Track(id: id, title: "Title \(id)", artist: "Artist", album: "Album", player: player)
 }
+/// Artwork per track id, optionally after a delay.
+final class FakeArtwork: ArtworkProviding, @unchecked Sendable {
+    var results: [String: ArtworkResult] = [:]
+    var delays: [String: Duration] = [:]
+
+    func artwork(for track: Track) async -> ArtworkResult {
+        if let delay = delays[track.id] { try? await Task.sleep(for: delay) }
+        return results[track.id] ?? .none
+    }
+}
+
+final class FakeQuery: PlayerQuerying, @unchecked Sendable {
+    var events: [Player: PlayerEvent] = [:]
+    private(set) var asked: [Player] = []
+
+    func event(for player: Player) async -> PlayerEvent? {
+        asked.append(player)
+        return events[player]
+    }
+}
+
+/// A clock the test moves by hand.
+final class TestClock: @unchecked Sendable {
+    var now = Date(timeIntervalSince1970: 1_000_000)
+    func advance(_ seconds: TimeInterval) { now = now.addingTimeInterval(seconds) }
+}
