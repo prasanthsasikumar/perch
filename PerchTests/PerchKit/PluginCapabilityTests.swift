@@ -25,6 +25,10 @@ final class PluginCapabilityTests: XCTestCase {
             Set([PluginCapability.accessibility]).disclosureLines,
             ["Types shortcuts and runs actions in other apps"]
         )
+        XCTAssertEqual(
+            Set([PluginCapability.media]).disclosureLines,
+            ["Reads what's playing in Spotify and Music"]
+        )
     }
 
     func testMultipleCapabilitiesAreOrderedDeterministically() {
