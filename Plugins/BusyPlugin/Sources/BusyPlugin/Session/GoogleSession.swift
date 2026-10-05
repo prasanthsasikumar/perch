@@ -68,12 +68,13 @@ public final class GoogleSession: NSObject {
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 "
         + "(KHTML, like Gecko) Version/17.5 Safari/605.1.15"
 
-    /// Loads a page, waits for Google to fill it in, and runs the extractor.
-    public func load(url: URL) async throws -> LoadedPage {
+    /// Loads a page, waits for it to fill itself in, and runs the named
+    /// extractor (`busyness` for Google, `planetfitness` for a club page).
+    public func load(url: URL, script name: String = "busyness") async throws -> LoadedPage {
         try await navigate(to: url)
         try? await Task.sleep(for: .seconds(settleDelay))
 
-        let script = try extractScriptSource()
+        let script = try extractScriptSource(named: name)
         let result: Any?
         do {
             result = try await webView.evaluateJavaScript(script)

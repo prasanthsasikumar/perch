@@ -33,6 +33,10 @@ public struct BusyReading: Codable, Equatable {
     /// 1 (Monday) to 7 (Sunday), as Google's day tabs number them.
     public var day: Int?
     public var hours: [HourBusyness]
+    /// People in the club right now and its capacity, when the source counts
+    /// heads (Planet Fitness does; Google never does).
+    public var headcount: Int?
+    public var capacity: Int?
 
     public init(
         name: String? = nil,
@@ -42,7 +46,9 @@ public struct BusyReading: Codable, Equatable {
         usualPercent: Int? = nil,
         currentHour: Int? = nil,
         day: Int? = nil,
-        hours: [HourBusyness] = []
+        hours: [HourBusyness] = [],
+        headcount: Int? = nil,
+        capacity: Int? = nil
     ) {
         self.name = name
         self.statusText = statusText
@@ -52,6 +58,8 @@ public struct BusyReading: Codable, Equatable {
         self.currentHour = currentHour
         self.day = day
         self.hours = hours
+        self.headcount = headcount
+        self.capacity = capacity
     }
 
     public var level: BusyLevel {
@@ -67,7 +75,12 @@ public struct BusyReading: Codable, Equatable {
         if isLive {
             var parts: [String] = []
             if let statusText { parts.append(statusText) }
-            if let livePercent {
+            if let livePercent, let headcount, let capacity {
+                // A head count is a share of capacity, not Google's relative
+                // busyness, so it reads as "full" with the people behind it.
+                parts.append("\(livePercent)% full")
+                parts.append("\(headcount) of \(capacity) people")
+            } else if let livePercent {
                 var figure = "\(livePercent)% now"
                 if let usualPercent { figure += ", usually \(usualPercent)%" }
                 parts.append(figure)

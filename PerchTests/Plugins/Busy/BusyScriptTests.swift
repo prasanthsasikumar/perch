@@ -96,7 +96,7 @@ final class BusyScriptTests: XCTestCase {
     }
 }
 
-private final class BusyLoadWatcher: NSObject, WKNavigationDelegate {
+final class BusyLoadWatcher: NSObject, WKNavigationDelegate {
     private let onFinish: () -> Void
 
     init(onFinish: @escaping () -> Void) {

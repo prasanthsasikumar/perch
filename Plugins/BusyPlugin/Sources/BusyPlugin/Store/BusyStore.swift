@@ -26,18 +26,23 @@ public final class BusyStore {
     private let source: BusynessSource
     private let clock: () -> Date
     private let filename: String
+    /// Queries a fresh install starts with. Only used when nothing has been
+    /// saved yet, so someone who removed every place keeps an empty list.
+    private let starterPlaces: [String]
     @ObservationIgnored private var pendingSave: Task<Void, Never>?
 
     public init(
         storage: PluginStorage,
         source: BusynessSource,
         clock: @escaping () -> Date = { .now },
-        filename: String = "busy.json"
+        filename: String = "busy.json",
+        starterPlaces: [String] = []
     ) {
         self.storage = storage
         self.source = source
         self.clock = clock
         self.filename = filename
+        self.starterPlaces = starterPlaces
         load()
         NotificationCenter.default.addObserver(
             forName: NSApplication.willTerminateNotification, object: nil, queue: .main
@@ -134,7 +139,10 @@ public final class BusyStore {
 
     private func load() {
         do {
-            guard let document = try storage.load(BusyDocument.self, named: filename) else { return }
+            guard let document = try storage.load(BusyDocument.self, named: filename) else {
+                places = starterPlaces.map { Place(query: $0, createdAt: clock()) }
+                return
+            }
             places = document.places
             results = document.results
             settings = document.settings

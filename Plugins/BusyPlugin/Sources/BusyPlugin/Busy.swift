@@ -25,14 +25,18 @@ public final class Busy: PerchPlugin {
 
     public required convenience init(context: PluginContext) {
         let session = GoogleSession()
-        self.init(context: context, source: GoogleBusynessSource(session: session))
+        let source = RoutingBusynessSource(
+            google: GoogleBusynessSource(session: session),
+            planetFitness: PlanetFitnessBusynessSource(session: session)
+        )
+        self.init(context: context, source: source, starterPlaces: [PlanetFitness.sampleClub])
         self.session = session
     }
 
     /// The testable initializer. The production path above passes the real
-    /// WKWebView-backed source; tests pass a fake.
-    public init(context: PluginContext, source: BusynessSource) {
-        store = BusyStore(storage: context.storage, source: source)
+    /// WKWebView-backed sources; tests pass a fake.
+    public init(context: PluginContext, source: BusynessSource, starterPlaces: [String] = []) {
+        store = BusyStore(storage: context.storage, source: source, starterPlaces: starterPlaces)
     }
 
     public var panel: AnyView {

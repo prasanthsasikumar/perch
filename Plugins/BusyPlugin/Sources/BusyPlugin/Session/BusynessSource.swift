@@ -17,6 +17,9 @@ public enum BusyError: Error, Equatable {
     /// Google redirected to its cookie-consent page. Nothing in the plugin
     /// can click through it.
     case consentWall
+    /// A Planet Fitness club page loaded without its Crowd Meter: the club
+    /// doesn't publish one, or the page has changed shape.
+    case noCrowdMeter
     /// Navigation failed or timed out. Worth retrying later.
     case failed(String)
 
@@ -27,6 +30,8 @@ public enum BusyError: Error, Equatable {
             "Google has no busyness data for this — try wording it the way Maps names the place."
         case .consentWall:
             "Google is asking for cookie consent, which Perch can't answer yet."
+        case .noCrowdMeter:
+            "Planet Fitness isn't showing a Crowd Meter for this club right now."
         case .failed(let reason):
             reason
         }
