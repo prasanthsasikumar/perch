@@ -28,7 +28,7 @@ struct BusyPanelView: View {
                         .foregroundStyle(.red)
                 }
 
-                TextField("Add a place, as you'd search it on Google", text: $query)
+                TextField("A place as you'd search it, or a Planet Fitness club link", text: $query)
                     .textFieldStyle(.roundedBorder)
                     .onSubmit(addPlace)
 

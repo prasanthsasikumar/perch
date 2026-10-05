@@ -51,7 +51,8 @@ struct PlaceCardView: View {
                         hours: reading.hours,
                         currentHour: reading.currentHour,
                         livePercent: reading.livePercent,
-                        level: reading.level
+                        level: reading.level,
+                        ceiling: reading.chartCeiling
                     )
                 }
             }

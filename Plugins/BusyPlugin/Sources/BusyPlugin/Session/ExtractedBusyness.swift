@@ -53,6 +53,8 @@ private struct RawPage: Decodable {
     let currentHour: Int?
     let day: Int?
     let hours: [RawHour]
+    let headcount: Int?
+    let capacity: Int?
 }
 
 /// The JavaScript that runs inside the webview.
@@ -60,8 +62,8 @@ private struct RawPage: Decodable {
 /// A bundled resource rather than a Swift string literal so a selector fix —
 /// the maintenance this design signs up for — is a one-file change that does
 /// not touch compiled code.
-public func extractScriptSource() throws -> String {
-    guard let url = Bundle.module.url(forResource: "busyness", withExtension: "js"),
+public func extractScriptSource(named name: String = "busyness") throws -> String {
+    guard let url = Bundle.module.url(forResource: name, withExtension: "js"),
           let source = try? String(contentsOf: url, encoding: .utf8)
     else { throw ExtractionError.scriptMissing }
     return source
@@ -83,7 +85,9 @@ public func decodeExtractedPage(_ json: String) throws -> ExtractedPage {
             usualPercent: raw.usualPercent,
             currentHour: raw.currentHour,
             day: raw.day,
-            hours: raw.hours.map { HourBusyness(hour: $0.hour, percent: $0.percent) }
+            hours: raw.hours.map { HourBusyness(hour: $0.hour, percent: $0.percent) },
+            headcount: raw.headcount,
+            capacity: raw.capacity
         )
     )
 }
