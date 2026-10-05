@@ -8,6 +8,7 @@ struct RecordView: View {
     let radius: CGFloat
     let squash: CGFloat
     let motion: SpinMotion
+    let light: Color
     let animate: Bool
 
     var body: some View {
@@ -23,6 +24,7 @@ struct RecordView: View {
                     label
                         .frame(width: radius * 0.72, height: radius * 0.72)
                         .clipShape(Circle())
+                        .colorMultiply(light)
                     Circle().fill(Color(white: 0.75)).frame(width: radius * 0.04, height: radius * 0.04)
                 }
                 .rotationEffect(.degrees(motion.angle(at: context.date)))
@@ -35,6 +37,13 @@ struct RecordView: View {
             }
             .frame(width: radius * 2, height: radius * 2)
             .scaleEffect(x: 1, y: squash)
+            // The record's edge: a sliver of its thickness below the top face.
+            .background(
+                Ellipse()
+                    .fill(Color(white: 0.02))
+                    .frame(width: radius * 2, height: radius * 2 * squash)
+                    .offset(y: radius * 0.018)
+            )
             .shadow(color: .black.opacity(0.45), radius: radius * 0.05, y: radius * 0.03)
         }
     }

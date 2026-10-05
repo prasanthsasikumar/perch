@@ -16,11 +16,13 @@ struct SceneView: View {
                         .resizable()
                         .frame(width: frames.imageRect.width, height: frames.imageRect.height)
                         .position(x: frames.imageRect.midX, y: frames.imageRect.midY)
-                    SleeveView(artwork: model.artwork, title: title, size: frames.sleeveSize,
-                               rotation: frames.sleeveRotation, style: scene.descriptor.sleeve.style)
+                    SleeveView(artwork: model.artwork, title: title, width: frames.sleeveSize,
+                               height: frames.sleeveHeight, rotation: frames.sleeveRotation,
+                               skew: frames.sleeveSkew, light: scene.descriptor.lightColor,
+                               style: scene.descriptor.sleeve.style)
                         .position(frames.sleeveCenter)
                     RecordView(artwork: model.artwork, fallbackTitle: title, radius: frames.platterRadius,
-                               squash: frames.squash, motion: model.motion,
+                               squash: frames.squash, motion: model.motion, light: scene.descriptor.lightColor,
                                animate: model.isAnimating && !model.isScreenAsleep)
                         .position(frames.platterCenter)
                     if let arm = frames.tonearm {

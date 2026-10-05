@@ -36,6 +36,13 @@ struct SceneDescriptor: Codable, Equatable, Identifiable, Sendable {
         var size: Double
         var rotation: Double
         var style: Style
+        /// Height over width. A sleeve leaning back, seen from above, looks
+        /// shorter than it is wide. Default 1.
+        var aspect: Double? = nil
+        /// Degrees to slope the top and bottom edges while keeping the sides
+        /// vertical: a stand turned away from the camera. Negative rises to
+        /// the right. Default 0.
+        var skew: Double? = nil
     }
 
     var id: String
@@ -45,4 +52,7 @@ struct SceneDescriptor: Codable, Equatable, Identifiable, Sendable {
     /// `nil` when the photo already shows its own arm.
     var tonearm: Tonearm?
     var sleeve: Sleeve
+    /// The room's light as an RGB multiplier (0…1) for the drawn album art,
+    /// so it sits in a lamplit room instead of glowing. Default: untinted.
+    var light: [Double]?
 }

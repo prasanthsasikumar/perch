@@ -50,4 +50,31 @@ final class SceneLayoutTests: XCTestCase {
         XCTAssertEqual(frames.sleeveSize, 288, accuracy: 0.001)
         XCTAssertEqual(frames.sleeveCenter.y, -30 + 0.5 * 960, accuracy: 0.001)
     }
+
+    func testSleeveIsSquareUnlessForeshortened() {
+        var scene = descriptor(platterX: 0.5, platterY: 0.5)
+        let square = SceneLayout.frames(for: scene, imageSize: image, in: CGSize(width: 1440, height: 900))
+        XCTAssertEqual(square.sleeveHeight, square.sleeveSize, accuracy: 0.001)
+        scene.sleeve.aspect = 0.9
+        scene.sleeve.skew = -16
+        let leaning = SceneLayout.frames(for: scene, imageSize: image, in: CGSize(width: 1440, height: 900))
+        XCTAssertEqual(leaning.sleeveHeight, 0.9 * 288, accuracy: 0.001)
+        XCTAssertEqual(leaning.sleeveSkew, -16)
+    }
+
+    /// An upright sleeve turned away from the camera keeps its vertical edges
+    /// vertical; only the horizontal edges slope. The centre stays put.
+    func testShearKeepsVerticalsAndCentre() {
+        let size = CGSize(width: 200, height: 180)
+        let shear = SleeveGeometry.shear(degrees: -16, size: size)
+        let centre = CGPoint(x: 100, y: 90).applying(shear)
+        XCTAssertEqual(centre.x, 100, accuracy: 0.001)
+        XCTAssertEqual(centre.y, 90, accuracy: 0.001)
+        let topLeft = CGPoint(x: 0, y: 0).applying(shear)
+        let bottomLeft = CGPoint(x: 0, y: 180).applying(shear)
+        XCTAssertEqual(topLeft.x, bottomLeft.x, accuracy: 0.001, "left edge stays vertical")
+        let bottomRight = CGPoint(x: 200, y: 180).applying(shear)
+        // -16° slopes the bottom edge up to the right by tan(16°) × width.
+        XCTAssertEqual(bottomLeft.y - bottomRight.y, tan(16 * .pi / 180) * 200, accuracy: 0.001)
+    }
 }

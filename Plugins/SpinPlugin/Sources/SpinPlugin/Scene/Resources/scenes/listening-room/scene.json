@@ -2,6 +2,7 @@
   "id": "listening-room",
   "name": "Listening Room",
   "order": 1,
-  "platter": { "x": 0.541, "y": 0.658, "radius": 0.108, "squash": 0.36 },
-  "sleeve": { "x": 0.288, "y": 0.418, "size": 0.19, "rotation": 0, "style": "stand" }
+  "light": [1.0, 0.97, 0.92],
+  "platter": { "x": 0.5462, "y": 0.6459, "radius": 0.1163, "squash": 0.291 },
+  "sleeve": { "x": 0.2837, "y": 0.4337, "size": 0.1806, "rotation": 0, "style": "stand", "aspect": 0.92, "skew": 0 }
 }

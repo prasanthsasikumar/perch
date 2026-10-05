@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 
 struct TonearmFrame: Equatable {
     var pivot: CGPoint
@@ -16,7 +17,19 @@ struct SceneFrames: Equatable {
     var tonearm: TonearmFrame?
     var sleeveCenter: CGPoint
     var sleeveSize: CGFloat
+    var sleeveHeight: CGFloat
     var sleeveRotation: Double
+    var sleeveSkew: Double
+}
+
+enum SleeveGeometry {
+    /// Shears a view of `size` about its centre: vertical edges stay
+    /// vertical, horizontal edges slope by `degrees` (negative rises to the
+    /// right).
+    static func shear(degrees: Double, size: CGSize) -> CGAffineTransform {
+        let k = tan(degrees * .pi / 180)
+        return CGAffineTransform(a: 1, b: k, c: 0, d: 1, tx: 0, ty: -k * size.width / 2)
+    }
 }
 
 /// Aspect-fills the background onto the screen (cropping, never letterboxing)
@@ -47,7 +60,9 @@ enum SceneLayout {
             },
             sleeveCenter: point(scene.sleeve.x, scene.sleeve.y),
             sleeveSize: length(scene.sleeve.size),
-            sleeveRotation: scene.sleeve.rotation
+            sleeveHeight: length(scene.sleeve.size) * (scene.sleeve.aspect ?? 1),
+            sleeveRotation: scene.sleeve.rotation,
+            sleeveSkew: scene.sleeve.skew ?? 0
         )
     }
 }

@@ -55,4 +55,16 @@ final class SceneCatalogTests: XCTestCase {
             XCTAssertNotNil(NSImage(contentsOf: scene.thumbnailURL), scene.id)
         }
     }
+
+    func testOptionalSleeveShapeAndLightDecode() throws {
+        try write("a", order: 1, json: """
+        {"id":"a","name":"a","order":1,"light":[0.5,0.4,0.3],
+         "platter":{"x":0.5,"y":0.5,"radius":0.1,"squash":0.4},
+         "sleeve":{"x":0.2,"y":0.5,"size":0.2,"rotation":0,"style":"stand","aspect":0.92,"skew":-16}}
+        """)
+        let scene = try XCTUnwrap(SceneCatalog.load(from: root).first?.descriptor)
+        XCTAssertEqual(scene.light, [0.5, 0.4, 0.3])
+        XCTAssertEqual(scene.sleeve.aspect, 0.92)
+        XCTAssertEqual(scene.sleeve.skew, -16)
+    }
 }
