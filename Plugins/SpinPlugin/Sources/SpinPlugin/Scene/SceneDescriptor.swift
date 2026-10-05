@@ -43,6 +43,11 @@ struct SceneDescriptor: Codable, Equatable, Identifiable, Sendable {
         /// vertical: a stand turned away from the camera. Negative rises to
         /// the right. Default 0.
         var skew: Double? = nil
+        /// The sleeve's four corners on the photo, [x, y] fractions, clockwise
+        /// from top-left. When set, the art is warped onto them in true
+        /// perspective, so it can lean back against a stand; x, y, size,
+        /// aspect and skew are then ignored. Placed with scripts/scene_editor.py.
+        var corners: [[Double]]? = nil
     }
 
     var id: String

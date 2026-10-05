@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spin Scene Editor</title>
+<style>
+  :root { --bg: #16161a; --panel: #222228; --text: #ececf1; --muted: #9a9aa6; --accent: #ff9f43; --sleeve: #4fc3f7; --record: #ff5c8a; --lip: #7bed9f; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.4 -apple-system, BlinkMacSystemFont, sans-serif; }
+  header { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; padding: 10px 16px; background: var(--panel); border-bottom: 1px solid #333; }
+  header label { display: flex; gap: 6px; align-items: center; color: var(--muted); }
+  select, button, input[type=range] { font: inherit; }
+  select, button { background: #2e2e36; color: var(--text); border: 1px solid #44444e; border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #1a1205; font-weight: 600; }
+  #status { color: var(--muted); min-width: 160px; }
+  .legend { display: flex; gap: 12px; color: var(--muted); }
+  .legend span::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; background: var(--c); vertical-align: -1px; }
+  #help { padding: 8px 16px; color: var(--muted); }
+  #wrap { overflow: auto; padding: 0 16px 24px; }
+  #sizer { position: relative; overflow: hidden; }
+  #stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  #stage > * { position: absolute; left: 0; top: 0; }
+  #art { transform-origin: 0 0; width: 1000px; height: 1000px; object-fit: cover; }
+  svg { overflow: visible; }
+  .handle { cursor: grab; stroke: #000; stroke-width: 1.5; }
+  .handle.sel { stroke: #fff; stroke-width: 3; }
+  .outline { fill: none; stroke-width: 2; stroke-dasharray: 6 4; pointer-events: none; }
+</style>
+</head>
+<body>
+<header>
+  <label>Scene <select id="scene"></select></label>
+  <label>Zoom <input id="zoom" type="range" min="0.3" max="2" step="0.05" value="0.6"> <span id="zoomv"></span></label>
+  <label><input id="guides" type="checkbox" checked> Outlines</label>
+  <label><input id="seeThrough" type="checkbox"> See-through record</label>
+  <button id="addPt">+ Lip point</button>
+  <button id="delPt">− Lip point</button>
+  <button id="reload">Revert</button>
+  <button id="save" class="primary">Save to scene.json</button>
+  <span id="status"></span>
+  <span class="legend"><span style="--c: var(--sleeve)">Sleeve corners</span><span style="--c: var(--record)">Record</span><span style="--c: var(--lip)">Lip (hides sleeve bottom)</span></span>
+</header>
+<div id="help">Drag the handles. Click one, then use the arrow keys to nudge it 1 px (Shift: 10 px). The record has a centre handle, a side handle for its width and a front handle for its depth. Lip points: select one and use + / − to add or remove.</div>
+<div id="wrap"><div id="sizer"><div id="stage">
+  <img id="bg" alt="">
+  <img id="art" alt="">
+  <svg id="ov"></svg>
+</div></div></div>
+<script>
+const NS = "http://www.w3.org/2000/svg";
+const $ = (id) => document.getElementById(id);
+let scene, W = 2880, H = 1607, zoom = 0.6;
+let corners = [], platter = {}, lip = [], selected = null;
+
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+
+// Corners from the older x/y/size/aspect/skew form, so every scene opens editable.
+function cornersFrom(s) {
+  if (s.corners) return s.corners.map(([x, y]) => [x * W, y * H]);
+  const w = s.size * W, h = w * (s.aspect ?? 1), cx = s.x * W, cy = s.y * H;
+  const k = Math.tan((s.skew ?? 0) * Math.PI / 180);
+  return [[-w/2, -h/2], [w/2, -h/2], [w/2, h/2], [-w/2, h/2]].map(([x, y]) => [cx + x, cy + y + k * x]);
+}
+
+async function load(id) {
+  scene = await (await fetch(`/scene/${id}`)).json();
+  await new Promise((ok) => { $("bg").onload = ok; $("bg").src = `/bg/${id}?t=${Date.now()}`; });
+  W = $("bg").naturalWidth; H = $("bg").naturalHeight;
+  corners = cornersFrom(scene.sleeve);
+  const p = scene.platter;
+  platter = { x: p.x * W, y: p.y * H, rx: p.radius * W, ry: p.radius * W * p.squash };
+  lip = (scene.occluders?.[0] ?? []).map(([x, y]) => [x * W, y * H]);
+  if (!lip.length) { const [, , br, bl] = corners; lip = [[bl[0] - 20, bl[1] - 40], [br[0] + 20, br[1] - 40], [br[0] + 20, br[1] + 20], [bl[0] - 20, bl[1] + 20]]; }
+  selected = null;
+  $("status").textContent = "";
+  render();
+}
+
+// Unit-square-to-quad homography as a CSS matrix3d, for a w×h element at the origin.
+function homography(w, h, q) {
+  const src = [[0, 0], [w, 0], [w, h], [0, h]], A = [], b = [];
+  for (let i = 0; i < 4; i++) {
+    const [x, y] = src[i], [u, v] = q[i];
+    A.push([x, y, 1, 0, 0, 0, -u * x, -u * y]); b.push(u);
+    A.push([0, 0, 0, x, y, 1, -v * x, -v * y]); b.push(v);
+  }
+  for (let c = 0; c < 8; c++) {
+    let p = c; for (let r = c + 1; r < 8; r++) if (Math.abs(A[r][c]) > Math.abs(A[p][c])) p = r;
+    [A[c], A[p]] = [A[p], A[c]]; [b[c], b[p]] = [b[p], b[c]];
+    for (let r = 0; r < 8; r++) if (r !== c) {
+      const f = A[r][c] / A[c][c];
+      for (let k = c; k < 8; k++) A[r][k] -= f * A[c][k];
+      b[r] -= f * b[c];
+    }
+  }
+  const [a, bb, c, d, e, f, g, hh] = b.map((v, i) => v / A[i][i]);
+  return `matrix3d(${a},${d},0,${g},${bb},${e},0,${hh},0,0,1,0,${c},${f},0,1)`;
+}
+
+function render() {
+  const stage = $("stage");
+  stage.style.width = W + "px"; stage.style.height = H + "px";
+  stage.style.transform = `scale(${zoom})`;
+  $("sizer").style.width = W * zoom + "px"; $("sizer").style.height = H * zoom + "px";
+  $("zoomv").textContent = Math.round(zoom * 100) + "%";
+  $("art").style.transform = homography(1000, 1000, corners);
+
+  const ov = $("ov"); ov.innerHTML = ""; ov.setAttribute("width", W); ov.setAttribute("height", H);
+  const defs = el("defs", {}, ov);
+  const clip = el("clipPath", { id: "lipclip" }, defs);
+  el("polygon", { points: lip.map((p) => p.join(",")).join(" ") }, clip);
+  const pat = el("pattern", { id: "label", patternUnits: "objectBoundingBox", patternContentUnits: "objectBoundingBox", width: 1, height: 1 }, defs);
+  el("image", { href: "/art", x: 0, y: 0, width: 1, height: 1, preserveAspectRatio: "none" }, pat);
+
+  // The lip redrawn over the sleeve, exactly as the app does.
+  el("image", { href: $("bg").src, x: 0, y: 0, width: W, height: H, "clip-path": "url(#lipclip)" }, ov);
+
+  const see = $("seeThrough").checked;
+  el("ellipse", { cx: platter.x, cy: platter.y, rx: platter.rx, ry: platter.ry, fill: "#0d0d0d", "fill-opacity": see ? 0.45 : 1 }, ov);
+  el("ellipse", { cx: platter.x, cy: platter.y, rx: platter.rx * 0.36, ry: platter.ry * 0.36, fill: "url(#label)", "fill-opacity": see ? 0.5 : 1 }, ov);
+
+  if ($("guides").checked) {
+    el("polygon", { points: corners.map((p) => p.join(",")).join(" "), class: "outline", stroke: "var(--sleeve)" }, ov);
+    el("polygon", { points: lip.map((p) => p.join(",")).join(" "), class: "outline", stroke: "var(--lip)" }, ov);
+    el("ellipse", { cx: platter.x, cy: platter.y, rx: platter.rx, ry: platter.ry, class: "outline", stroke: "var(--record)" }, ov);
+  }
+  const r = 9 / zoom;
+  corners.forEach((p, i) => handle(ov, p, r, "var(--sleeve)", ["corner", i]));
+  lip.forEach((p, i) => handle(ov, p, r * 0.8, "var(--lip)", ["lip", i]));
+  handle(ov, [platter.x, platter.y], r, "var(--record)", ["rec", "c"]);
+  handle(ov, [platter.x + platter.rx, platter.y], r, "var(--record)", ["rec", "rx"]);
+  handle(ov, [platter.x, platter.y + platter.ry], r, "var(--record)", ["rec", "ry"]);
+}
+
+function handle(ov, [x, y], r, color, key) {
+  const isSel = selected && selected[0] === key[0] && selected[1] === key[1];
+  const c = el("circle", { cx: x, cy: y, r, fill: color, class: "handle" + (isSel ? " sel" : "") }, ov);
+  c.addEventListener("pointerdown", (ev) => {
+    ev.preventDefault(); selected = key; c.setPointerCapture(ev.pointerId);
+    const rect = $("stage").getBoundingClientRect();
+    const move = (e) => setPoint(key, (e.clientX - rect.left) / zoom, (e.clientY - rect.top) / zoom);
+    c.addEventListener("pointermove", move);
+    c.addEventListener("pointerup", () => { c.removeEventListener("pointermove", move); render(); }, { once: true });
+    render();
+  });
+}
+
+function setPoint([kind, which], x, y) {
+  if (kind === "corner") corners[which] = [x, y];
+  else if (kind === "lip") lip[which] = [x, y];
+  else if (which === "c") { platter.x = x; platter.y = y; }
+  else if (which === "rx") platter.rx = Math.max(10, Math.abs(x - platter.x));
+  else if (which === "ry") platter.ry = Math.max(5, Math.abs(y - platter.y));
+  $("status").textContent = "unsaved changes";
+  render();
+}
+
+function current(key) {
+  const [kind, which] = key;
+  if (kind === "corner") return corners[which];
+  if (kind === "lip") return lip[which];
+  if (which === "c") return [platter.x, platter.y];
+  if (which === "rx") return [platter.x + platter.rx, platter.y];
+  return [platter.x, platter.y + platter.ry];
+}
+
+document.addEventListener("keydown", (e) => {
+  if (!selected || !e.key.startsWith("Arrow")) return;
+  e.preventDefault();
+  const step = e.shiftKey ? 10 : 1, [x, y] = current(selected);
+  const d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
+  setPoint(selected, x + d[0], y + d[1]);
+});
+
+$("addPt").onclick = () => {
+  const i = selected?.[0] === "lip" ? selected[1] : lip.length - 1, j = (i + 1) % lip.length;
+  lip.splice(i + 1, 0, [(lip[i][0] + lip[j][0]) / 2, (lip[i][1] + lip[j][1]) / 2]);
+  selected = ["lip", i + 1]; render();
+};
+$("delPt").onclick = () => {
+  if (selected?.[0] !== "lip" || lip.length <= 3) return;
+  lip.splice(selected[1], 1); selected = null; render();
+};
+$("zoom").oninput = (e) => { zoom = +e.target.value; render(); };
+$("guides").onchange = render;
+$("seeThrough").onchange = render;
+$("reload").onclick = () => load($("scene").value);
+$("scene").onchange = (e) => load(e.target.value);
+$("save").onclick = async () => {
+  const f = ([x, y]) => [+(x / W).toFixed(4), +(y / H).toFixed(4)];
+  const body = {
+    platter: { x: +(platter.x / W).toFixed(4), y: +(platter.y / H).toFixed(4), radius: +(platter.rx / W).toFixed(4), squash: +(platter.ry / platter.rx).toFixed(4) },
+    corners: corners.map(f),
+    occluders: [lip.map(f)],
+  };
+  const res = await fetch(`/save/${$("scene").value}`, { method: "POST", body: JSON.stringify(body) });
+  $("status").textContent = res.ok ? "Saved ✓ — tell Claude to rebuild" : "Save failed";
+};
+
+(async () => {
+  const ids = await (await fetch("/scenes")).json();
+  for (const id of ids) $("scene").add(new Option(id, id));
+  $("art").src = "/art";
+  $("art").onerror = () => { $("art").src = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10" fill="#c0392b"/><path d="M0 0L10 10M10 0L0 10" stroke="#fff"/></svg>'); };
+  await load(ids[0]);
+})();
+</script>
+</body>
+</html>

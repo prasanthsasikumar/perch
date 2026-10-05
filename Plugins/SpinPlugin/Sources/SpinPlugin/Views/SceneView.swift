@@ -16,11 +16,16 @@ struct SceneView: View {
                         .resizable()
                         .frame(width: frames.imageRect.width, height: frames.imageRect.height)
                         .position(x: frames.imageRect.midX, y: frames.imageRect.midY)
-                    SleeveView(artwork: model.artwork, title: title, width: frames.sleeveSize,
-                               height: frames.sleeveHeight, rotation: frames.sleeveRotation,
-                               skew: frames.sleeveSkew, light: scene.descriptor.lightColor,
-                               style: scene.descriptor.sleeve.style)
-                        .position(frames.sleeveCenter)
+                    if let corners = frames.sleeveCorners {
+                        QuadSleeveView(artwork: model.artwork, title: title, corners: corners,
+                                       light: scene.descriptor.lightColor)
+                    } else {
+                        SleeveView(artwork: model.artwork, title: title, width: frames.sleeveSize,
+                                   height: frames.sleeveHeight, rotation: frames.sleeveRotation,
+                                   skew: frames.sleeveSkew, light: scene.descriptor.lightColor,
+                                   style: scene.descriptor.sleeve.style)
+                            .position(frames.sleeveCenter)
+                    }
                     // Patches of the photo (the stand's lip) back over the sleeve.
                     ForEach(Array(frames.occluders.enumerated()), id: \.offset) { _, outline in
                         Image(nsImage: background)

@@ -48,3 +48,25 @@ extension SceneDescriptor {
         return Color(red: light[0], green: light[1], blue: light[2])
     }
 }
+
+/// The sleeve warped onto four corners in true perspective, so it can lean
+/// back against a stand instead of standing upright in front of it.
+struct QuadSleeveView: View {
+    let artwork: NSImage?
+    let title: String
+    let corners: [CGPoint]
+    let light: Color
+
+    /// The art is laid out at this size, then projected onto the corners.
+    private let side: CGFloat = 1000
+
+    var body: some View {
+        if let projection = SleeveGeometry.homography(width: side, height: side, to: corners) {
+            SleeveView(artwork: artwork, title: title, width: side, height: side,
+                       rotation: 0, skew: 0, light: light, style: .stand)
+                .projectionEffect(projection)
+                .frame(width: side, height: side)
+                .position(x: side / 2, y: side / 2)
+        }
+    }
+}

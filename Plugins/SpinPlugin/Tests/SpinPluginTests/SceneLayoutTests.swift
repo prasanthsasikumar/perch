@@ -94,4 +94,26 @@ final class SceneLayoutTests: XCTestCase {
                                         in: CGSize(width: 1440, height: 900))
         XCTAssertTrue(frames.occluders.isEmpty)
     }
+
+    /// The sleeve drawn from four corners: the art's corners must land on
+    /// them exactly, whatever the perspective.
+    func testHomographyMapsTheSquareOntoTheCorners() throws {
+        let quad = [CGPoint(x: 100, y: 80), CGPoint(x: 400, y: 40), CGPoint(x: 420, y: 300), CGPoint(x: 90, y: 330)]
+        let m = try XCTUnwrap(SleeveGeometry.homography(width: 1000, height: 1000, to: quad))
+        let square = [CGPoint(x: 0, y: 0), CGPoint(x: 1000, y: 0), CGPoint(x: 1000, y: 1000), CGPoint(x: 0, y: 1000)]
+        for (corner, expected) in zip(square, quad) {
+            let w = corner.x * m.m13 + corner.y * m.m23 + m.m33
+            XCTAssertEqual((corner.x * m.m11 + corner.y * m.m21 + m.m31) / w, expected.x, accuracy: 0.01)
+            XCTAssertEqual((corner.x * m.m12 + corner.y * m.m22 + m.m32) / w, expected.y, accuracy: 0.01)
+        }
+    }
+
+    func testCornersMapToScreen() {
+        var scene = descriptor(platterX: 0.5, platterY: 0.5)
+        scene.sleeve.corners = [[0, 0.5], [0.5, 0.5], [0.5, 1], [0, 1]]
+        let frames = SceneLayout.frames(for: scene, imageSize: image, in: CGSize(width: 1440, height: 900))
+        XCTAssertEqual(frames.sleeveCorners?.count, 4)
+        XCTAssertEqual(frames.sleeveCorners?[2].x ?? 0, 720, accuracy: 0.001)
+        XCTAssertEqual(frames.sleeveCorners?[2].y ?? 0, 930, accuracy: 0.001)
+    }
 }

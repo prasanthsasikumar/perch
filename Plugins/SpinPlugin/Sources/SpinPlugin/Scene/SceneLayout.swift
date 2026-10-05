@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import SwiftUI
 
 struct TonearmFrame: Equatable {
     var pivot: CGPoint
@@ -21,9 +22,42 @@ struct SceneFrames: Equatable {
     var sleeveRotation: Double
     var sleeveSkew: Double
     var occluders: [[CGPoint]] = []
+    /// The sleeve's corners on screen, when the scene gives them.
+    var sleeveCorners: [CGPoint]? = nil
 }
 
 enum SleeveGeometry {
+    /// The perspective transform taking a width×height view at the origin
+    /// onto `quad` (top-left, top-right, bottom-right, bottom-left), or nil
+    /// when the quad is degenerate.
+    static func homography(width: CGFloat, height: CGFloat, to quad: [CGPoint]) -> ProjectionTransform? {
+        guard quad.count == 4 else { return nil }
+        let source = [CGPoint(x: 0, y: 0), CGPoint(x: width, y: 0), CGPoint(x: width, y: height), CGPoint(x: 0, y: height)]
+        var a = [[Double]](), b = [Double]()
+        for (s, d) in zip(source, quad) {
+            let (x, y, u, v) = (Double(s.x), Double(s.y), Double(d.x), Double(d.y))
+            a.append([x, y, 1, 0, 0, 0, -u * x, -u * y]); b.append(u)
+            a.append([0, 0, 0, x, y, 1, -v * x, -v * y]); b.append(v)
+        }
+        // Gauss-Jordan with partial pivoting on the 8×8 system.
+        for c in 0..<8 {
+            guard let p = (c..<8).max(by: { abs(a[$0][c]) < abs(a[$1][c]) }), abs(a[p][c]) > 1e-9 else { return nil }
+            a.swapAt(c, p); b.swapAt(c, p)
+            for r in 0..<8 where r != c {
+                let f = a[r][c] / a[c][c]
+                for k in c..<8 { a[r][k] -= f * a[c][k] }
+                b[r] -= f * b[c]
+            }
+        }
+        let h = (0..<8).map { CGFloat(b[$0] / a[$0][$0]) }
+        return ProjectionTransform(CATransform3D(
+            m11: h[0], m12: h[3], m13: 0, m14: h[6],
+            m21: h[1], m22: h[4], m23: 0, m24: h[7],
+            m31: 0, m32: 0, m33: 1, m34: 0,
+            m41: h[2], m42: h[5], m43: 0, m44: 1
+        ))
+    }
+
     /// Shears a view of `size` about its centre: vertical edges stay
     /// vertical, horizontal edges slope by `degrees` (negative rises to the
     /// right).
@@ -66,6 +100,10 @@ enum SceneLayout {
             sleeveSkew: scene.sleeve.skew ?? 0,
             occluders: (scene.occluders ?? []).map { outline in
                 outline.compactMap { $0.count == 2 ? point($0[0], $0[1]) : nil }
+            },
+            sleeveCorners: scene.sleeve.corners.flatMap { corners in
+                let points = corners.compactMap { $0.count == 2 ? point($0[0], $0[1]) : nil }
+                return points.count == 4 ? points : nil
             }
         )
     }
