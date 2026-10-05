@@ -1,0 +1,7 @@
+{
+  "id": "after-hours",
+  "name": "After Hours",
+  "order": 2,
+  "platter": { "x": 0.502, "y": 0.596, "radius": 0.1, "squash": 0.34 },
+  "sleeve": { "x": 0.18, "y": 0.565, "size": 0.17, "rotation": -2, "style": "stand" }
+}

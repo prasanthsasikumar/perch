@@ -1,7 +1,7 @@
 # Spin plugin — design
 
 **Date:** 2026-10-04
-**Status:** approved in conversation, spec awaiting review
+**Status:** implemented
 
 While Spotify or Apple Music plays, the desktop becomes a room with a
 turntable: the album art is the record's centre label and a sleeve in the
@@ -26,6 +26,11 @@ photos, layout — ships here.
 - Track change → the label and sleeve cross-fade to the new art.
 - Two built-in scenes: **Listening Room** (daylight, wood desk) and **After
   Hours** (warm lamp light). Chosen in the panel.
+- **Off until the user turns it on** ("Show scene on desktop" in the panel).
+  Decided while planning: new plugins arrive enabled for upgraders, and
+  defaulting on would raise an Automation prompt and cover their desktop
+  unannounced. While off, Spin still shows the track in the panel and menu
+  bar (notifications need no permission) but sends no Apple Events.
 
 Out of scope for v1, by decision: user-supplied scenes (and the editor to
 place the turntable on them), other displays, playback controls, players
@@ -54,10 +59,10 @@ receiving is allowed from the sandbox.
 `Player State` is `Playing` / `Paused` / `Stopped`. Both players are also
 asked once at plugin start (only if already running, via
 `NSRunningApplication`) so a scene can appear without waiting for the next
-track change. Implementation must verify against the real apps on this Mac
-that userInfo arrives intact in the sandboxed Perch; if it does not, the
-fallback is to treat the notification as a ping and read state over
-AppleScript.
+track change. Verified 2026-10-05 on the dev Mac: Spotify's userInfo arrives
+intact in the sandboxed Perch: with the scene switched off, so no Apple Event
+is ever sent, starting playback put the track in the menu bar. A notification whose
+payload does not parse is still treated as a ping and read over AppleScript.
 
 **Album art — Apple Events.** Fetched once per track, cached on disk by
 track ID (last 50 kept):
@@ -104,11 +109,16 @@ one file serves every screen size):
 {
   "id": "listening-room",
   "name": "Listening Room",
-  "platter": { "x": 0.43, "y": 0.66, "radius": 0.11, "squash": 0.42 },
-  "tonearm": { "pivotX": 0.53, "pivotY": 0.55, "restAngle": -25, "playAngle": 8 },
-  "sleeve": { "x": 0.18, "y": 0.42, "width": 0.18, "height": 0.26, "rotation": -2, "style": "stand" }
+  "order": 1,
+  "platter": { "x": 0.541, "y": 0.658, "radius": 0.108, "squash": 0.36 },
+  "sleeve": { "x": 0.288, "y": 0.418, "size": 0.19, "rotation": 0, "style": "stand" }
 }
 ```
+
+`tonearm` (`pivotX`, `pivotY`, `length`, `restAngle`, `playAngle`) is
+optional: both shipped photos came back from Gemini with their own arm at
+rest, so neither scene draws one. The sleeve is a square (`size` is a
+fraction of image width) because album art is square.
 
 `squash` is the vertical scale of the record ellipse, because the photos
 look down at the desk at an angle. `style` is `stand` (upright in a holder)

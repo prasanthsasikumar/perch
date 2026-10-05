@@ -1,0 +1,35 @@
+import SwiftUI
+
+/// The whole desktop scene for the selected scene and current track.
+struct SceneView: View {
+    let model: SpinModel
+    let background: NSImage
+
+    var body: some View {
+        GeometryReader { geometry in
+            if let scene = model.selectedScene {
+                let frames = SceneLayout.frames(for: scene.descriptor, imageSize: background.size, in: geometry.size)
+                let title = model.nowPlaying?.track?.title ?? ""
+                let isPlaying = model.nowPlaying?.state == .playing
+                ZStack(alignment: .topLeading) {
+                    Image(nsImage: background)
+                        .resizable()
+                        .frame(width: frames.imageRect.width, height: frames.imageRect.height)
+                        .position(x: frames.imageRect.midX, y: frames.imageRect.midY)
+                    SleeveView(artwork: model.artwork, title: title, size: frames.sleeveSize,
+                               rotation: frames.sleeveRotation, style: scene.descriptor.sleeve.style)
+                        .position(frames.sleeveCenter)
+                    RecordView(artwork: model.artwork, fallbackTitle: title, radius: frames.platterRadius,
+                               squash: frames.squash, motion: model.motion,
+                               animate: model.isAnimating && !model.isScreenAsleep)
+                        .position(frames.platterCenter)
+                    if let arm = frames.tonearm {
+                        TonearmView(frame: arm, isPlaying: isPlaying)
+                    }
+                }
+                .animation(.easeInOut(duration: 0.6), value: model.artwork)
+            }
+        }
+        .ignoresSafeArea()
+    }
+}

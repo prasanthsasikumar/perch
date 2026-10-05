@@ -26,6 +26,8 @@
 	<string>public.app-category.productivity</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Spin reads the current track and its album art from Spotify and Music to draw them on your desktop.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2026 Prasanth Sasikumar</string>
 </dict>

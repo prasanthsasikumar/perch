@@ -8,8 +8,9 @@ numbers a click away; **Market**, which watches Facebook Marketplace searches;
 **Busy**, which shows how busy a place is right now; **Server**, which
 watches the health of machines you run; and **Internet**, which tells you
 whether your connection is actually working; **Download**, which saves a
-video or its audio from a pasted link; and **Tap**, which runs a shortcut when
-you knock on your MacBook. More can be added without disturbing what's
+video or its audio from a pasted link; **Tap**, which runs a shortcut when
+you knock on your MacBook; and **Spin**, which turns your desktop into a
+turntable playing whatever's on. More can be added without disturbing what's
 already there.
 
 <p align="center">
@@ -270,6 +271,27 @@ do with a handful of commands, none of which can carry a script.
 Tap declares `accessibility`. It classifies knocks on your Mac and sends
 nothing anywhere.
 
+### Spin
+
+While Spotify or Apple Music plays, your desktop becomes a room with a
+turntable: the album art is the record's label and the sleeve in the stand
+beside it. The record turns while the music does and eases to a stop when you
+pause.
+
+- **Off until you turn it on.** Switch on "Show scene on desktop" in the Spin
+  tab. macOS asks once per player whether Perch may read it.
+- **Two rooms.** *Listening Room* in daylight and *After Hours* by lamplight.
+- **Your wallpaper is untouched.** The scene is a window behind your icons and
+  windows. Two minutes after the music stops it fades, and your desktop is back.
+- **The menu bar** shows the track while it plays.
+
+Only Spotify and Music are supported: other players, browsers included, report
+what they play only to Apple's own processes.
+
+Spin declares `network`, to download Spotify's album art, and `media`: it sends
+Apple Events to Spotify and Music, only while they are running, and only while
+the scene is switched on.
+
 ## Settings
 
 Click the gear icon in the panel.
@@ -364,6 +386,7 @@ Plugins/BusyPlugin/      The Busy plugin: Google popular-times scraping, store, 
 Plugins/ServerPlugin/    The Server plugin: vpsstat agent client, alert rules, store, views
 Plugins/TapPlugin/       The Tap plugin, and TapKit: the gesture map, knock classifier,
                          sounds, and the messages Perch and PerchTap exchange
+Plugins/SpinPlugin/      The Spin plugin: now-playing, album art, scenes, the desktop window
 PerchTap/                Tap's unsandboxed companion: motion sensor, actions, overlay
 PerchKeepAwake/          The companion app that registers the keep-awake helper
 PerchHelper/             The root helper behind the keep-awake toggle
