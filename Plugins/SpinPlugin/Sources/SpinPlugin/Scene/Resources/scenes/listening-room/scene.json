@@ -4,5 +4,5 @@
   "order": 1,
   "light": [1.0, 0.97, 0.92],
   "platter": { "x": 0.5458, "y": 0.6447, "radius": 0.1181, "squash": 0.2824 },
-  "sleeve": { "x": 0.2889, "y": 0.4337, "size": 0.1806, "rotation": 0, "style": "stand", "aspect": 0.92, "skew": 0 }
+  "sleeve": { "x": 0.2889, "y": 0.4412, "size": 0.1806, "rotation": 0, "style": "stand", "aspect": 0.92, "skew": 0 }
 }
