@@ -55,6 +55,20 @@ final class TapStoreTests: XCTestCase {
         store.setEnabled(false)
     }
 
+    /// Pausing in the panel must survive a restart: the companion reads the
+    /// saved file at launch, so the choice is written before it is told.
+    func testPausingIsSavedBeforeTheCompanionIsTold() throws {
+        let store = makeStore()
+        store.setEnabled(true)
+        store.setListening(false)
+        XCTAssertEqual(try savedConfig()?.listening, false)
+        XCTAssertEqual(link.sent.last, .stop)
+        store.setListening(true)
+        XCTAssertEqual(try savedConfig()?.listening, true)
+        XCTAssertEqual(link.sent.last, .start)
+        store.setEnabled(false)
+    }
+
     func testAStatusMeansRunning() {
         let store = makeStore()
         store.setEnabled(true)
@@ -300,4 +314,5 @@ final class ConfigLocationTests: XCTestCase {
         let companion = URL(fileURLWithPath: "/Applications/Perch.app/Contents/Helpers/PerchTap.app")
         XCTAssertEqual(TapLink.hostURL(ofCompanionAt: companion).path, "/Applications/Perch.app")
     }
+
 }

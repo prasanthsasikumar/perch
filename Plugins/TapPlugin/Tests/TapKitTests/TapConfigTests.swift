@@ -120,4 +120,16 @@ final class TapConfigTests: XCTestCase {
             XCTAssertEqual(Set(pack.sounds).count, 6, pack.rawValue)
         }
     }
+
+    /// Settings written before pausing was remembered keep listening, as before.
+    func testListeningDefaultsOnForOlderFiles() throws {
+        XCTAssertTrue(try decode(#"{"sensitivity": 0.3}"#).listening)
+    }
+
+    func testPausedSurvivesARoundTrip() throws {
+        var config = TapConfig.default
+        config.listening = false
+        let data = try JSONEncoder().encode(config)
+        XCTAssertFalse(try JSONDecoder().decode(TapConfig.self, from: data).listening)
+    }
 }

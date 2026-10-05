@@ -17,6 +17,9 @@ public struct TapConfig: Codable, Equatable, Sendable {
     public var soundPack: SoundPack
     public var soundVolume: Float
     public var hasCompletedOnboarding: Bool
+    /// The panel's Listening switch. Saved so a pause survives a restart:
+    /// the companion reads it at launch. Default on.
+    public var listening: Bool
     public var appRules: [AppRule]
     public var layout: GestureLayout
 
@@ -34,6 +37,7 @@ public struct TapConfig: Codable, Equatable, Sendable {
         soundPack: .drumKit,
         soundVolume: 0.7,
         hasCompletedOnboarding: false,
+        listening: true,
         appRules: [
             AppRule(
                 bundleID: "com.todesktop.230313mzl4w4u92",
@@ -70,6 +74,7 @@ public struct TapConfig: Codable, Equatable, Sendable {
         soundPack: SoundPack,
         soundVolume: Float,
         hasCompletedOnboarding: Bool,
+        listening: Bool = true,
         appRules: [AppRule],
         layout: GestureLayout
     ) {
@@ -86,6 +91,7 @@ public struct TapConfig: Codable, Equatable, Sendable {
         self.soundPack = soundPack
         self.soundVolume = soundVolume
         self.hasCompletedOnboarding = hasCompletedOnboarding
+        self.listening = listening
         self.appRules = appRules
         self.layout = layout
     }
@@ -109,6 +115,7 @@ public struct TapConfig: Codable, Equatable, Sendable {
         soundVolume = try c.decodeIfPresent(Float.self, forKey: .soundVolume) ?? fallback.soundVolume
         hasCompletedOnboarding = try c.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding)
             ?? fallback.hasCompletedOnboarding
+        listening = try c.decodeIfPresent(Bool.self, forKey: .listening) ?? fallback.listening
         appRules = try c.decodeIfPresent([AppRule].self, forKey: .appRules) ?? fallback.appRules
         layout = (try? c.decodeIfPresent(GestureLayout.self, forKey: .layout)) ?? fallback.layout
         // A map missing any of its six cells is not one a knock can rely on.

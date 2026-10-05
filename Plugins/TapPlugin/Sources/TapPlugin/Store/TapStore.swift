@@ -183,7 +183,12 @@ public final class TapStore {
 
     // MARK: - Commands
 
-    public func setListening(_ on: Bool) { link.send(on ? .start : .stop) }
+    /// Saved before the companion is told, so a pause outlasts a restart.
+    public func setListening(_ on: Bool) {
+        config.listening = on
+        saveNow()
+        link.send(on ? .start : .stop)
+    }
     public func request(_ kind: PermissionKind) { link.send(.request(kind)) }
     public func openSystemSettings(_ kind: PermissionKind) { link.send(.openSystemSettings(kind)) }
     public func previewHUD() { link.send(.previewHUD) }

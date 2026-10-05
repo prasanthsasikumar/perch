@@ -105,7 +105,7 @@ final class Companion {
 
         // Perch switches a new plugin on for everyone who upgrades, so nothing
         // listens until the user has been through Tap's setup and chosen to.
-        if config.enabled && config.hasCompletedOnboarding {
+        if config.enabled && config.hasCompletedOnboarding && config.listening {
             startListening()
         }
         sendStatus(force: true)
