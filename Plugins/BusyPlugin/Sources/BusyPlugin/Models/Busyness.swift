@@ -71,6 +71,15 @@ public struct BusyReading: Codable, Equatable {
     /// Leads with Google's words when it has them, because "A little busy"
     /// means more to a person than 78%; the numbers follow so the words can
     /// be checked against the histogram.
+    /// The percent the chart's full bar height stands for. Google's figures
+    /// are relative to the place's own peak, so 100. A head count is a share
+    /// of capacity that rarely passes a fifth, so its chart scales to the
+    /// day's busiest hour (or the live figure, if that is higher).
+    public var chartCeiling: Int {
+        guard capacity != nil else { return 100 }
+        return max(1, hours.map(\.percent).max() ?? 0, livePercent ?? 0)
+    }
+
     public var summary: String {
         if isLive {
             var parts: [String] = []

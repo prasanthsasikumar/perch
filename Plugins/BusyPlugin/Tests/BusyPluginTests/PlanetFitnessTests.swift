@@ -134,3 +134,21 @@ final class HeadcountSummaryTests: XCTestCase {
         XCTAssertEqual(reading.summary, "Busy · 90% now")
     }
 }
+
+final class ChartCeilingTests: XCTestCase {
+    func testGoogleChartsKeepTheirHundredScale() {
+        XCTAssertEqual(BusyReading(hours: [HourBusyness(hour: 9, percent: 40)]).chartCeiling, 100)
+    }
+
+    /// A gym rarely passes a fifth of capacity, so on a 0–100 scale its day
+    /// would be a flat line. Head-count charts scale to the day's own peak.
+    func testHeadcountChartsScaleToTheDaysPeak() {
+        let reading = BusyReading(isLive: true, livePercent: 8,
+                                  hours: [HourBusyness(hour: 7, percent: 16), HourBusyness(hour: 18, percent: 21)],
+                                  headcount: 28, capacity: 334)
+        XCTAssertEqual(reading.chartCeiling, 21)
+        let liveAbovePeak = BusyReading(isLive: true, livePercent: 30, hours: [HourBusyness(hour: 7, percent: 16)], capacity: 334)
+        XCTAssertEqual(liveAbovePeak.chartCeiling, 30)
+        XCTAssertEqual(BusyReading(capacity: 334).chartCeiling, 1, "never divides by zero")
+    }
+}

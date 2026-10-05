@@ -23,6 +23,8 @@ struct HistogramView: View {
     let currentHour: Int?
     let livePercent: Int?
     let level: BusyLevel
+    /// The percent a full-height bar stands for; see `BusyReading.chartCeiling`.
+    var ceiling: Int = 100
 
     private static let barHeight: CGFloat = 36
 
@@ -68,7 +70,7 @@ struct HistogramView: View {
     /// A floor of 2pt so a closed hour reads as an hour with nobody there
     /// rather than as a gap in the data.
     private func height(_ percent: Int) -> CGFloat {
-        max(2, Self.barHeight * CGFloat(percent) / 100)
+        max(2, Self.barHeight * min(1, CGFloat(percent) / CGFloat(max(1, ceiling))))
     }
 
     /// "4a", "12p", "9p" — the shortest form that is still unambiguous.
