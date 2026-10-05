@@ -26,4 +26,13 @@ final class PlayerScriptsTests: XCTestCase {
         XCTAssertTrue(script.contains("artwork url"))
         XCTAssertTrue(PlayerScripts.artwork(of: makeTrack("00FF", .music)).contains("persistent ID"))
     }
+
+    /// Final review 3: a script queued behind a slow one must not relaunch a
+    /// player the user quit meanwhile, so each script checks for itself.
+    func testScriptsDoNothingWhenThePlayerIsNotRunning() {
+        for player in Player.allCases {
+            XCTAssertTrue(PlayerScripts.state(of: player).hasPrefix("if application \"\(player.scriptName)\" is running then"))
+            XCTAssertTrue(PlayerScripts.artwork(of: makeTrack("x", player)).hasPrefix("if application \"\(player.scriptName)\" is running then"))
+        }
+    }
 }

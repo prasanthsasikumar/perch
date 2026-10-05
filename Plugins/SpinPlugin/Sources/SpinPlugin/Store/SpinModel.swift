@@ -35,7 +35,11 @@ public final class SpinModel {
     public var showsScene: Bool {
         didSet {
             defaults.set(showsScene, for: Key.showsScene)
-            guard showsScene, !oldValue else { return }
+            guard showsScene != oldValue else { return }
+            guard showsScene else {
+                cancelScripting()
+                return
+            }
             if let track = nowPlaying?.track { loadArtwork(for: track) }
             prime()
         }
@@ -121,11 +125,9 @@ public final class SpinModel {
 
     /// Called when the plugin is disabled: forget everything, cancel everything.
     public func reset() {
-        artworkTask?.cancel()
+        cancelScripting()
         lingerTask?.cancel()
         settleTask?.cancel()
-        queryTasks.forEach { $0.cancel() }
-        queryTasks = []
         tracker = NowPlayingTracker()
         nowPlaying = nil
         artwork = nil
@@ -148,6 +150,14 @@ public final class SpinModel {
     }
 
     // MARK: Work
+
+    /// Stops every Apple Events request in flight or queued.
+    private func cancelScripting() {
+        artworkTask?.cancel()
+        queryTasks.forEach { $0.cancel() }
+        queryTasks = []
+        if artworkStatus == .loading { artworkStatus = .none }
+    }
 
     private func prime() {
         guard showsScene else { return }

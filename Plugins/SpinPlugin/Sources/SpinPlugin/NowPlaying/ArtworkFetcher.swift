@@ -1,4 +1,5 @@
 import Foundation
+import ImageIO
 
 enum ArtworkResult: Equatable, Sendable {
     case image(Data)
@@ -57,7 +58,10 @@ actor ArtworkFetcher: ArtworkProviding {
         case .none:
             return .none
         }
-        guard !data.isEmpty else { return .none }
+        // Music can answer `missing value` or another non-picture as raw bytes.
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              CGImageSourceGetCount(source) > 0
+        else { return .none }
         store(data, at: file)
         return .image(data)
     }

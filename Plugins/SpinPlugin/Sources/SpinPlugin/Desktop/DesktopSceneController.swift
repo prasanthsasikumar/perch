@@ -22,7 +22,7 @@ final class DesktopSceneController {
         screenToken = NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
         ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.fitToScreen() }
+            MainActor.assumeIsolated { self?.screensChanged() }
         }
         observe()
     }
@@ -104,8 +104,14 @@ final class DesktopSceneController {
         }
     }
 
-    private func fitToScreen() {
-        guard let window, let screen = NSScreen.screens.first else { return }
+    /// Refits a visible scene, and brings up one that could not be shown
+    /// while no display was attached (clamshell, a monitor reconnecting).
+    private func screensChanged() {
+        guard let window else {
+            update()
+            return
+        }
+        guard let screen = NSScreen.screens.first else { return }
         window.setFrame(screen.frame, display: true)
     }
 }

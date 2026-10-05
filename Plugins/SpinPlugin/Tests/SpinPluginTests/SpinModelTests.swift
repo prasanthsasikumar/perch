@@ -158,4 +158,16 @@ final class SpinModelTests: XCTestCase {
         first.selectedSceneID = "room"
         XCTAssertEqual(model().selectedSceneID, "room")
     }
+
+    /// Final review 4: turning the scene off stops in-flight Apple Events work.
+    func testTurningSceneOffCancelsArtworkFetch() async {
+        artwork.results["a"] = .image(pngData(size: 3))
+        artwork.delays["a"] = .milliseconds(200)
+        let model = model()
+        model.receive(playing("a"))
+        model.showsScene = false
+        try? await Task.sleep(for: .milliseconds(300))
+        XCTAssertNil(model.artwork)
+        XCTAssertNotEqual(model.artworkStatus, .loaded)
+    }
 }

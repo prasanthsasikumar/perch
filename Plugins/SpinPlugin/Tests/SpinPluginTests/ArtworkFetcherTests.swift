@@ -64,4 +64,14 @@ final class ArtworkFetcherTests: XCTestCase {
         let files = try FileManager.default.contentsOfDirectory(atPath: cache.path)
         XCTAssertEqual(files.count, ArtworkFetcher.cacheLimit)
     }
+
+    /// Final review 2: Music can answer `missing value`, which arrives as raw
+    /// bytes. Caching those would block the real art forever.
+    func testNonImageDataIsNotCached() async throws {
+        runner.result = .success(.data(Data([0, 1, 2, 3])))
+        let result = await fetcher().artwork(for: makeTrack("00FF", .music))
+        XCTAssertEqual(result, .none)
+        let files = (try? FileManager.default.contentsOfDirectory(atPath: cache.path)) ?? []
+        XCTAssertTrue(files.isEmpty)
+    }
 }

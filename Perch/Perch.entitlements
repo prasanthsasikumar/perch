@@ -19,6 +19,8 @@
 	<array>
 		<string>org.ahlab.Perch.helper</string>
 	</array>
+	<key>com.apple.security.automation.apple-events</key>
+	<true/>
 	<key>com.apple.security.temporary-exception.apple-events</key>
 	<array>
 		<string>com.spotify.client</string>
