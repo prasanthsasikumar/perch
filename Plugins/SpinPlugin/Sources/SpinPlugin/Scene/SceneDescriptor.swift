@@ -55,4 +55,8 @@ struct SceneDescriptor: Codable, Equatable, Identifiable, Sendable {
     /// The room's light as an RGB multiplier (0…1) for the drawn album art,
     /// so it sits in a lamplit room instead of glowing. Default: untinted.
     var light: [Double]?
+    /// Outlines on the photo, as [x, y] fractions, redrawn above the sleeve:
+    /// the stand's lip, so the sleeve's bottom edge drops behind it the way a
+    /// real one rests in the groove.
+    var occluders: [[[Double]]]?
 }

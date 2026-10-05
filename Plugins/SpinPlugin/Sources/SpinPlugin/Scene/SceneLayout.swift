@@ -20,6 +20,7 @@ struct SceneFrames: Equatable {
     var sleeveHeight: CGFloat
     var sleeveRotation: Double
     var sleeveSkew: Double
+    var occluders: [[CGPoint]] = []
 }
 
 enum SleeveGeometry {
@@ -62,7 +63,10 @@ enum SceneLayout {
             sleeveSize: length(scene.sleeve.size),
             sleeveHeight: length(scene.sleeve.size) * (scene.sleeve.aspect ?? 1),
             sleeveRotation: scene.sleeve.rotation,
-            sleeveSkew: scene.sleeve.skew ?? 0
+            sleeveSkew: scene.sleeve.skew ?? 0,
+            occluders: (scene.occluders ?? []).map { outline in
+                outline.compactMap { $0.count == 2 ? point($0[0], $0[1]) : nil }
+            }
         )
     }
 }

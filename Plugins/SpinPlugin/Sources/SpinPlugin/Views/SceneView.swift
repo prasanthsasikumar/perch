@@ -21,6 +21,16 @@ struct SceneView: View {
                                skew: frames.sleeveSkew, light: scene.descriptor.lightColor,
                                style: scene.descriptor.sleeve.style)
                         .position(frames.sleeveCenter)
+                    // Patches of the photo (the stand's lip) back over the sleeve.
+                    ForEach(Array(frames.occluders.enumerated()), id: \.offset) { _, outline in
+                        Image(nsImage: background)
+                            .resizable()
+                            .frame(width: frames.imageRect.width, height: frames.imageRect.height)
+                            .position(x: frames.imageRect.midX, y: frames.imageRect.midY)
+                            .mask {
+                                Path { path in path.addLines(outline); path.closeSubpath() }
+                            }
+                    }
                     RecordView(artwork: model.artwork, fallbackTitle: title, radius: frames.platterRadius,
                                squash: frames.squash, motion: model.motion, light: scene.descriptor.lightColor,
                                animate: model.isAnimating && !model.isScreenAsleep)

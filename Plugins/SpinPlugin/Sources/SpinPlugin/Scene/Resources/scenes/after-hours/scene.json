@@ -4,5 +4,6 @@
   "order": 2,
   "light": [0.5, 0.37, 0.26],
   "platter": { "x": 0.5021, "y": 0.5769, "radius": 0.0979, "squash": 0.23 },
-  "sleeve": { "x": 0.2222, "y": 0.5899, "size": 0.1389, "rotation": 0, "style": "stand", "aspect": 0.92, "skew": -15.1 }
+  "sleeve": { "x": 0.2222, "y": 0.6036, "size": 0.1389, "rotation": 0, "style": "stand", "aspect": 0.92, "skew": -15.1 },
+  "occluders": [ [[0.1458, 0.7461], [0.3056, 0.6633], [0.309, 0.6982], [0.1493, 0.7791]] ]
 }

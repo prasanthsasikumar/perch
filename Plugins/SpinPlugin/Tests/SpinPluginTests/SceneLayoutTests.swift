@@ -77,4 +77,21 @@ final class SceneLayoutTests: XCTestCase {
         // -16° slopes the bottom edge up to the right by tan(16°) × width.
         XCTAssertEqual(bottomLeft.y - bottomRight.y, tan(16 * .pi / 180) * 200, accuracy: 0.001)
     }
+
+    /// Occluders are patches of the photo redrawn over the sleeve, so the
+    /// stand's lip hides its bottom edge. They map like every other point.
+    func testOccludersMapToScreen() {
+        var scene = descriptor(platterX: 0.5, platterY: 0.5)
+        scene.occluders = [[[0, 0.5], [1, 0.5], [1, 1]]]
+        let frames = SceneLayout.frames(for: scene, imageSize: image, in: CGSize(width: 1440, height: 900))
+        XCTAssertEqual(frames.occluders.count, 1)
+        XCTAssertEqual(frames.occluders[0][1].x, 1440, accuracy: 0.001)
+        XCTAssertEqual(frames.occluders[0][1].y, -30 + 0.5 * 960, accuracy: 0.001)
+    }
+
+    func testNoOccludersByDefault() {
+        let frames = SceneLayout.frames(for: descriptor(platterX: 0.5, platterY: 0.5), imageSize: image,
+                                        in: CGSize(width: 1440, height: 900))
+        XCTAssertTrue(frames.occluders.isEmpty)
+    }
 }
