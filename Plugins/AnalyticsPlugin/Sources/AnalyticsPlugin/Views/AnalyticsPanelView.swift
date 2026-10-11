@@ -52,7 +52,8 @@ struct AnalyticsPanelView: View {
                             clientEmail: store.clientEmail,
                             isExpanded: expanded.contains(property.id),
                             isStale: store.failures[property.id] != nil && store.stats[property.id] != nil,
-                            onToggle: { toggle(property.id) }
+                            onToggle: { toggle(property.id) },
+                            onShowDetails: { PropertyDetailWindows.show(property, store: store) }
                         )
                     }
                 }

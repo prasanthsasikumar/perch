@@ -405,4 +405,53 @@ final class AnalyticsStoreTests: XCTestCase {
         XCTAssertTrue(store.properties.isEmpty)
         XCTAssertNil(store.lastRefreshed)
     }
+
+    // MARK: - Breakdown
+
+    func testBreakdownIsFetchedOnDemandForOneProperty() async throws {
+        let breakdown = PropertyBreakdown(
+            totals: PropertyStats.Totals(activeUsers: 175, sessions: 181, engagedSessions: 13),
+            sections: [.init(dimension: .country, rows: [
+                .init(value: "Singapore", totals: PropertyStats.Totals(activeUsers: 116, sessions: 116)),
+            ])]
+        )
+        let api = StubAnalyticsAPI(breakdowns: ["111": .success(breakdown)])
+        let store = makeStore(credentials: try configuredCredentials(), api: api)
+        store.setProperties([siteA])
+
+        let fetched = try await store.breakdown(for: siteA.id)
+
+        XCTAssertEqual(fetched, breakdown)
+        // On demand only: the dropdown's refresh never asked for it.
+        XCTAssertEqual(api.callCount, 0)
+    }
+
+    func testBreakdownWithoutACredentialThrowsNotConfigured() async {
+        let store = makeStore(credentials: InMemoryCredentialStore())
+        do {
+            _ = try await store.breakdown(for: "111")
+            XCTFail("expected a throw")
+        } catch {
+            XCTAssertEqual(error as? AnalyticsError, .notConfigured)
+        }
+    }
+
+    /// Caches written before engagement metrics existed have no such keys.
+    /// They must still load, or every upgrade would open on an empty panel.
+    func testACacheWrittenBeforeEngagementMetricsStillLoads() throws {
+        let directory = Fixture.temporaryDirectory()
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let totals = #"{"activeUsers":20,"sessions":24,"screenPageViews":70,"bounceRate":0.5,"averageSessionDuration":30}"#
+        let json = """
+        {"properties":[{"id":"111","displayName":"a.example"}],
+         "stats":{"111":{"last30Days":\(totals),"currentWeek":\(totals),"previousWeek":\(totals),"daily":[]}},
+         "primaryPropertyID":"111"}
+        """
+        try Data(json.utf8).write(to: directory.appendingPathComponent("analytics.json"))
+
+        let store = makeStore(directory: directory, credentials: InMemoryCredentialStore())
+
+        XCTAssertEqual(store.stats["111"]?.currentWeek.activeUsers, 20)
+        XCTAssertEqual(store.stats["111"]?.currentWeek.engagedSessions, 0)
+    }
 }

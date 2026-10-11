@@ -11,6 +11,7 @@ struct PropertyCardView: View {
     let isExpanded: Bool
     let isStale: Bool
     let onToggle: () -> Void
+    let onShowDetails: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -23,11 +24,17 @@ struct PropertyCardView: View {
             if let stats {
                 weekHeadline(stats)
                 if isExpanded {
+                    engagement(stats.currentWeek)
                     Divider()
                     thirtyDays(stats)
                     if !stats.daily.isEmpty {
                         Divider()
                         dailyBreakdown(stats)
+                    }
+                    HStack {
+                        Spacer()
+                        Button("Details…", action: onShowDetails)
+                            .controlSize(.small)
                     }
                 }
             } else if failure == nil {
@@ -80,6 +87,25 @@ struct PropertyCardView: View {
                 change: stats.sessionsChange
             )
         }
+    }
+
+    /// The line that says how much of "Users" was people.
+    private func engagement(_ week: PropertyStats.Totals) -> some View {
+        HStack(spacing: 8) {
+            Text("Engaged")
+                .font(.callout)
+            if week.looksLikeBots {
+                BotNote()
+            }
+            Spacer()
+            Text(Formatting.compact(week.engagedSessions))
+                .font(.callout.monospacedDigit().weight(.medium))
+            Text(Formatting.rate(week.engagementRate))
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .frame(width: 62, alignment: .trailing)
+        }
+        .help("Sessions that lasted over 10 seconds, saw a second page, or converted")
     }
 
     private func thirtyDays(_ stats: PropertyStats) -> some View {

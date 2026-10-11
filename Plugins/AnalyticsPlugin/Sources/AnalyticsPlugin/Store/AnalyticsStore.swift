@@ -176,6 +176,14 @@ public final class AnalyticsStore {
         return try await api.discoverProperties()
     }
 
+    /// Not cached and not part of `refresh()`: the detail window asks when it
+    /// opens, so the background loop never pays for seven extra reports.
+    public func breakdown(for propertyID: String) async throws -> PropertyBreakdown {
+        loadCredentialIfNeeded()
+        guard let api else { throw AnalyticsError.notConfigured }
+        return try await api.breakdown(for: propertyID, today: now())
+    }
+
     // MARK: - Refresh
 
     /// True when the cache is older than `maxAge`, or there is no cache.

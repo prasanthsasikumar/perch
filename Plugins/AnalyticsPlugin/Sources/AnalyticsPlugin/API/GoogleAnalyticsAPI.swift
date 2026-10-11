@@ -9,6 +9,10 @@ public protocol GoogleAnalyticsAPI: Sendable {
     /// The three reports for one property, as of a given day.
     func stats(for propertyID: String, today: Date) async throws -> PropertyStats
 
+    /// The trailing week split by source, country, device and so on. Only the
+    /// detail window asks for this.
+    func breakdown(for propertyID: String, today: Date) async throws -> PropertyBreakdown
+
     /// Every property the credential can see, via the Admin API.
     func discoverProperties() async throws -> [AnalyticsProperty]
 

@@ -44,6 +44,7 @@ final class StubAnalyticsAPI: GoogleAnalyticsAPI, @unchecked Sendable {
     private let lock = NSLock()
     private var results: [String: Result<PropertyStats, AnalyticsError>]
     private var discovery: Result<[AnalyticsProperty], AnalyticsError>
+    private var breakdowns: [String: Result<PropertyBreakdown, AnalyticsError>]
     private var _callCount = 0
     /// Awaited inside `stats(for:today:)` before it returns, so a test can
     /// hold a call "in flight" and cancel the caller out from under it —
@@ -54,11 +55,13 @@ final class StubAnalyticsAPI: GoogleAnalyticsAPI, @unchecked Sendable {
     init(
         clientEmail: String = "perch@example.iam.gserviceaccount.com",
         results: [String: Result<PropertyStats, AnalyticsError>] = [:],
-        discovery: Result<[AnalyticsProperty], AnalyticsError> = .success([])
+        discovery: Result<[AnalyticsProperty], AnalyticsError> = .success([]),
+        breakdowns: [String: Result<PropertyBreakdown, AnalyticsError>] = [:]
     ) {
         self.clientEmail = clientEmail
         self.results = results
         self.discovery = discovery
+        self.breakdowns = breakdowns
     }
 
     var callCount: Int { lock.withLock { _callCount } }
@@ -79,6 +82,14 @@ final class StubAnalyticsAPI: GoogleAnalyticsAPI, @unchecked Sendable {
         }
         switch result {
         case .success(let stats): return stats
+        case .failure(let error): throw error
+        case nil: throw AnalyticsError.permissionDenied
+        }
+    }
+
+    func breakdown(for propertyID: String, today: Date) async throws -> PropertyBreakdown {
+        switch lock.withLock({ breakdowns[propertyID] }) {
+        case .success(let breakdown): return breakdown
         case .failure(let error): throw error
         case nil: throw AnalyticsError.permissionDenied
         }
