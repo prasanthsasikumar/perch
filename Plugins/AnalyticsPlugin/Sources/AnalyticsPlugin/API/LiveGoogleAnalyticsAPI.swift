@@ -40,7 +40,8 @@ public struct LiveGoogleAnalyticsAPI: GoogleAnalyticsAPI {
         // from, so this replaces the two calls the Python script makes.
         async let weeks = runReport(propertyID, body: [
             "dateRanges": [range(windows.currentWeek), range(windows.previousWeek)],
-            "metrics": metrics(["activeUsers", "sessions", "screenPageViews"]),
+            "metrics": metrics(["activeUsers", "sessions", "screenPageViews",
+                                "engagedSessions", "userEngagementDuration"]),
         ])
         async let daily = runReport(propertyID, body: [
             "dateRanges": [range(.last7Days)],
@@ -56,6 +57,54 @@ public struct LiveGoogleAnalyticsAPI: GoogleAnalyticsAPI {
             previousWeek: weeksReport.totals(forDateRange: 1),
             daily: dailyReport.dailyPoints()
         )
+    }
+
+    /// How many rows each breakdown table keeps. Enough to see who the real
+    /// visitors are past the top bot row, short enough to scan.
+    private static let breakdownRowLimit = 8
+
+    private static let breakdownMetrics = [
+        "activeUsers", "sessions", "engagedSessions", "userEngagementDuration", "screenPageViews",
+    ]
+
+    public func breakdown(for propertyID: String, today: Date) async throws -> PropertyBreakdown {
+        // The same trailing week the card's headline uses, so the window's
+        // totals match the numbers that were clicked on.
+        let week = range(DateWindows(today: today, calendar: calendar).currentWeek)
+
+        async let totals = runReport(propertyID, body: [
+            "dateRanges": [week],
+            "metrics": metrics(Self.breakdownMetrics),
+        ])
+        // Seven independent reports; serially the window would take seconds
+        // to fill.
+        let sections = try await withThrowingTaskGroup(
+            of: PropertyBreakdown.Section.self
+        ) { group -> [PropertyBreakdown.Section] in
+            for dimension in PropertyBreakdown.Dimension.allCases {
+                group.addTask {
+                    let report = try await runReport(propertyID, body: [
+                        "dateRanges": [week],
+                        "dimensions": [["name": dimension.rawValue]],
+                        "metrics": metrics(Self.breakdownMetrics),
+                        "orderBys": [["metric": ["metricName": "sessions"], "desc": true]],
+                        "limit": Self.breakdownRowLimit,
+                    ])
+                    return PropertyBreakdown.Section(
+                        dimension: dimension,
+                        rows: report.breakdownRows(dimension: dimension.rawValue)
+                    )
+                }
+            }
+            var collected: [PropertyBreakdown.Section] = []
+            for try await section in group { collected.append(section) }
+            let order = PropertyBreakdown.Dimension.allCases
+            return collected.sorted {
+                order.firstIndex(of: $0.dimension)! < order.firstIndex(of: $1.dimension)!
+            }
+        }
+
+        return PropertyBreakdown(totals: try await totals.totals(), sections: sections)
     }
 
     public func discoverProperties() async throws -> [AnalyticsProperty] {

@@ -12,19 +12,75 @@ public struct PropertyStats: Codable, Equatable, Sendable {
         public var screenPageViews: Double
         public var bounceRate: Double
         public var averageSessionDuration: Double
+        /// Sessions that lasted over ten seconds, saw a second page, or fired a
+        /// conversion. The closest thing GA has to "a person was here".
+        public var engagedSessions: Double
+        /// Total foreground seconds across every user in the window.
+        public var userEngagementDuration: Double
 
         public init(
             activeUsers: Double = 0,
             sessions: Double = 0,
             screenPageViews: Double = 0,
             bounceRate: Double = 0,
-            averageSessionDuration: Double = 0
+            averageSessionDuration: Double = 0,
+            engagedSessions: Double = 0,
+            userEngagementDuration: Double = 0
         ) {
             self.activeUsers = activeUsers
             self.sessions = sessions
             self.screenPageViews = screenPageViews
             self.bounceRate = bounceRate
             self.averageSessionDuration = averageSessionDuration
+            self.engagedSessions = engagedSessions
+            self.userEngagementDuration = userEngagementDuration
+        }
+
+        // Hand-written so caches from before the engagement metrics existed
+        // still decode; those keys are simply absent and read as zero.
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            func value(_ key: CodingKeys) throws -> Double {
+                try container.decodeIfPresent(Double.self, forKey: key) ?? 0
+            }
+            self.init(
+                activeUsers: try value(.activeUsers),
+                sessions: try value(.sessions),
+                screenPageViews: try value(.screenPageViews),
+                bounceRate: try value(.bounceRate),
+                averageSessionDuration: try value(.averageSessionDuration),
+                engagedSessions: try value(.engagedSessions),
+                userEngagementDuration: try value(.userEngagementDuration)
+            )
+        }
+
+        /// Fewer sessions than this and the engagement rate is noise.
+        static let minimumSessionsToJudge: Double = 10
+        /// Under this share of engaged sessions, most of the traffic is
+        /// crawlers and scanners that load one page and leave in 0s.
+        static let botEngagementThreshold = 0.2
+
+        public var engagementRate: Double {
+            sessions > 0 ? engagedSessions / sessions : 0
+        }
+
+        /// Seconds per user, which is what GA's own "average engagement time"
+        /// card shows.
+        public var averageEngagementTime: Double {
+            activeUsers > 0 ? userEngagementDuration / activeUsers : 0
+        }
+
+        public var pagesPerSession: Double {
+            sessions > 0 ? screenPageViews / sessions : 0
+        }
+
+        public var looksLikeBots: Bool {
+            sessions >= Self.minimumSessionsToJudge && engagementRate < Self.botEngagementThreshold
+        }
+
+        /// Nobody engaged and nobody stayed: the signature of a bot row.
+        public var hasNoEngagement: Bool {
+            sessions > 0 && engagedSessions == 0 && userEngagementDuration == 0
         }
     }
 

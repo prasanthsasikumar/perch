@@ -79,13 +79,26 @@ struct RunReportResponse: Decodable {
         .sorted { $0.date < $1.date }
     }
 
+    /// One row per value of `dimension`, in the order GA returned them.
+    func breakdownRows(dimension name: String) -> [PropertyBreakdown.Row] {
+        (rows ?? []).map { row in
+            let value = dimension(name, in: row) ?? ""
+            return PropertyBreakdown.Row(
+                value: value.isEmpty ? "(not set)" : value,
+                totals: totals(in: row)
+            )
+        }
+    }
+
     private func totals(in row: Row?) -> PropertyStats.Totals {
         PropertyStats.Totals(
             activeUsers: metric("activeUsers", in: row),
             sessions: metric("sessions", in: row),
             screenPageViews: metric("screenPageViews", in: row),
             bounceRate: metric("bounceRate", in: row),
-            averageSessionDuration: metric("averageSessionDuration", in: row)
+            averageSessionDuration: metric("averageSessionDuration", in: row),
+            engagedSessions: metric("engagedSessions", in: row),
+            userEngagementDuration: metric("userEngagementDuration", in: row)
         )
     }
 }

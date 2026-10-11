@@ -31,6 +31,13 @@ public enum Formatting {
         return String(format: "%.1f%%", fraction * 100)
     }
 
+    /// Ratios like pages per session, where one decimal is all that means
+    /// anything.
+    public static func decimal(_ value: Double) -> String {
+        guard value.isFinite else { return "—" }
+        return String(format: "%.1f", value)
+    }
+
     private static let grouped: NumberFormatter = {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal

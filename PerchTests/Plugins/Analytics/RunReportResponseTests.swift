@@ -139,4 +139,61 @@ final class RunReportResponseTests: XCTestCase {
         """)
         XCTAssertEqual(response.dailyPoints().map(\.date), ["20260721", "20260725"])
     }
+
+    // MARK: - Engagement
+
+    func testTotalsReadEngagementMetrics() throws {
+        let response = try decode("""
+        {
+          "metricHeaders": [
+            {"name": "sessions"}, {"name": "engagedSessions"}, {"name": "userEngagementDuration"}
+          ],
+          "rows": [{"metricValues": [{"value": "181"}, {"value": "13"}, {"value": "315"}]}]
+        }
+        """)
+        let totals = response.totals()
+        XCTAssertEqual(totals.engagedSessions, 13)
+        XCTAssertEqual(totals.userEngagementDuration, 315)
+    }
+
+    // MARK: - Breakdowns
+
+    func testBreakdownRowsCarryTheDimensionValueAndEveryMetric() throws {
+        let response = try decode("""
+        {
+          "dimensionHeaders": [{"name": "country"}],
+          "metricHeaders": [
+            {"name": "activeUsers"}, {"name": "sessions"}, {"name": "engagedSessions"},
+            {"name": "userEngagementDuration"}, {"name": "screenPageViews"}
+          ],
+          "rows": [
+            {"dimensionValues": [{"value": "Singapore"}],
+             "metricValues": [{"value": "116"}, {"value": "116"}, {"value": "0"}, {"value": "0"}, {"value": "116"}]},
+            {"dimensionValues": [{"value": "New Zealand"}],
+             "metricValues": [{"value": "7"}, {"value": "9"}, {"value": "6"}, {"value": "191"}, {"value": "20"}]}
+          ]
+        }
+        """)
+
+        let rows = response.breakdownRows(dimension: "country")
+        XCTAssertEqual(rows.map(\.value), ["Singapore", "New Zealand"])
+        XCTAssertEqual(rows[1].totals.activeUsers, 7)
+        XCTAssertEqual(rows[1].totals.sessions, 9)
+        XCTAssertEqual(rows[1].totals.engagedSessions, 6)
+        XCTAssertEqual(rows[1].totals.userEngagementDuration, 191)
+        XCTAssertEqual(rows[1].totals.screenPageViews, 20)
+    }
+
+    /// GA sends an empty string for a landing page it could not attribute.
+    /// A blank row label reads as a rendering bug.
+    func testBlankDimensionValuesReadAsNotSet() throws {
+        let response = try decode("""
+        {
+          "dimensionHeaders": [{"name": "landingPage"}],
+          "metricHeaders": [{"name": "sessions"}],
+          "rows": [{"dimensionValues": [{"value": ""}], "metricValues": [{"value": "1"}]}]
+        }
+        """)
+        XCTAssertEqual(response.breakdownRows(dimension: "landingPage").map(\.value), ["(not set)"])
+    }
 }
