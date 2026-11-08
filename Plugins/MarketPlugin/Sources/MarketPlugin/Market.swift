@@ -13,6 +13,7 @@ public final class Market: PerchPlugin {
     public static let identifier = "org.ahlab.perch.market"
     public static let displayName = "Market"
     public static let icon = "binoculars"
+    public static let summary = "Watches Marketplace searches and tells you about new listings."
     public static let capabilities: Set<PluginCapability> = [.network, .notifications]
 
     public let store: MarketStore
@@ -69,6 +70,7 @@ public final class Market: PerchPlugin {
             poller.run()
         } else {
             poller.stop()
+            session?.suspend()
         }
     }
 }

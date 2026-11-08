@@ -64,7 +64,8 @@ public final class FacebookSession: NSObject {
         )
         hiddenWindow.title = "Market"
         hiddenWindow.contentView = webView
-        hiddenWindow.orderBack(nil)
+        // Not ordered in here: the window is parked on the first load, so a
+        // plugin that starts switched off never puts a page in the window list.
 
         super.init()
         webView.navigationDelegate = self
@@ -132,7 +133,21 @@ public final class FacebookSession: NSObject {
 
     // MARK: - Navigation
 
+    /// Puts the session to sleep when the plugin is switched off: any load in
+    /// flight fails, a sign-in window is closed, the page is swapped for a
+    /// blank one so its scripts stop running, and the parked window leaves the
+    /// window list. The next load parks it again. The Facebook cookie lives
+    /// in the default data store and survives.
+    public func suspend() {
+        finishLoad(throwing: CancellationError())
+        if isShowingSignIn { dismissSignIn() }
+        webView.stopLoading()
+        webView.loadHTMLString("", baseURL: nil)
+        hiddenWindow.orderOut(nil)
+    }
+
     private func navigate(to url: URL) async throws {
+        if !hiddenWindow.isVisible { hiddenWindow.orderBack(nil) }
         webView.stopLoading()
         return try await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask { @MainActor in
