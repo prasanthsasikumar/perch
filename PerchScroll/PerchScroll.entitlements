@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Not sandboxed: an event tap that changes other apps' scrolls is
+	     something the sandbox refuses. It needs no other entitlement; the
+	     Accessibility grant is what lets it change events. -->
+</dict>
+</plist>

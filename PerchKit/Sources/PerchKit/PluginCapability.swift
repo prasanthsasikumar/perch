@@ -13,6 +13,7 @@ public enum PluginCapability: String, CaseIterable, Sendable {
     case downloads
     case accessibility
     case media
+    case input
 
     public var disclosure: String {
         switch self {
@@ -22,6 +23,7 @@ public enum PluginCapability: String, CaseIterable, Sendable {
         case .downloads: "Saves files to your Downloads folder"
         case .accessibility: "Types shortcuts and runs actions in other apps"
         case .media: "Reads what's playing in Spotify and Music"
+        case .input: "Changes how your mouse or trackpad scrolls"
         }
     }
 }

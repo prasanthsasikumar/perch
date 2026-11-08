@@ -29,6 +29,10 @@ final class PluginCapabilityTests: XCTestCase {
             Set([PluginCapability.media]).disclosureLines,
             ["Reads what's playing in Spotify and Music"]
         )
+        XCTAssertEqual(
+            Set([PluginCapability.input]).disclosureLines,
+            ["Changes how your mouse or trackpad scrolls"]
+        )
     }
 
     func testMultipleCapabilitiesAreOrderedDeterministically() {

@@ -16,6 +16,7 @@ enum PluginTint {
         case "org.ahlab.perch.download": .red
         case "org.ahlab.perch.tap": .purple
         case "org.ahlab.perch.spin": .brown
+        case "org.ahlab.perch.scroll": .cyan
         default: .accentColor
         }
     }
@@ -32,6 +33,21 @@ extension PluginCapability {
         case .downloads: "arrow.down.circle.fill"
         case .accessibility: "hand.tap.fill"
         case .media: "music.note"
+        case .input: "computermouse.fill"
+        }
+    }
+
+    /// A word or two for a capability tag in Settings, where there is room for
+    /// a label but not the full sentence (which is the tag's tooltip).
+    var shortLabel: String {
+        switch self {
+        case .credentials: "Account key"
+        case .network: "Internet"
+        case .notifications: "Notifications"
+        case .downloads: "Downloads"
+        case .accessibility: "Controls other apps"
+        case .media: "Music"
+        case .input: "Mouse & trackpad"
         }
     }
 }

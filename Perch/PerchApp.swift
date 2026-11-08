@@ -7,6 +7,7 @@ import MarketPlugin
 import MenuBarExtraAccess
 import TasksPlugin
 import PerchKit
+import ScrollPlugin
 import ServerPlugin
 import SpinPlugin
 import SwiftUI
@@ -66,6 +67,7 @@ struct PerchApp: App {
             Download(context: .perch(Download.identifier)),
             Tap(context: .perch(Tap.identifier)),
             Spin(context: .perch(Spin.identifier)),
+            Scroll(context: .perch(Scroll.identifier)),
         ]
     }
 
