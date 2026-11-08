@@ -48,6 +48,8 @@ public final class Server: PerchPlugin {
         AnyView(ServerPanelView(store: store))
     }
 
+    public var hasSettings: Bool { true }
+
     public var settings: AnyView {
         AnyView(ServerSettingsView(store: store))
     }

@@ -36,6 +36,8 @@ public final class Scroll: PerchPlugin {
         AnyView(ScrollPanelView(store: store))
     }
 
+    public var hasSettings: Bool { true }
+
     public var settings: AnyView {
         AnyView(ScrollSettingsView(store: store))
     }

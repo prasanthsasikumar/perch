@@ -98,7 +98,7 @@ private struct PluginRow: View {
 
 /// Small labelled tags for what a plugin does. A plugin with none says it
 /// keeps everything on the Mac, which is worth saying out loud.
-private struct CapabilityTags: View {
+struct CapabilityTags: View {
     let capabilities: Set<PluginCapability>
 
     var body: some View {

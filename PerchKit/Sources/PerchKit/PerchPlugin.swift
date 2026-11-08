@@ -35,6 +35,11 @@ public protocol PerchPlugin: AnyObject, Observable {
     var panel: AnyView { get }
     /// This plugin's pane in the Settings window. Default: nothing.
     var settings: AnyView { get }
+    /// Whether `settings` has anything in it. The host can't look inside an
+    /// `AnyView`, so a plugin that provides a pane says so here, and the
+    /// host shows "nothing else to set" for the rest instead of a blank page.
+    /// Default: `false`.
+    var hasSettings: Bool { get }
     /// What to show in the menu bar while this plugin's tab is selected.
     /// Default: nothing, and Perch shows its own icon.
     var menuBarLabel: MenuBarLabel? { get }
@@ -77,6 +82,7 @@ public protocol PerchPlugin: AnyObject, Observable {
 public extension PerchPlugin {
     static var summary: String { "" }
     var settings: AnyView { AnyView(EmptyView()) }
+    var hasSettings: Bool { false }
     var menuBarLabel: MenuBarLabel? { nil }
     var footerActions: [PluginAction] { [] }
 

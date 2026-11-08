@@ -104,6 +104,8 @@ public final class Analytics: PerchPlugin {
         AnyView(AnalyticsRootPanel(plugin: self))
     }
 
+    public var hasSettings: Bool { true }
+
     public var settings: AnyView {
         AnyView(AnalyticsRootSettings(plugin: self))
     }

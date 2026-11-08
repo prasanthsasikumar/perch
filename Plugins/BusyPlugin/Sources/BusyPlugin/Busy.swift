@@ -44,6 +44,8 @@ public final class Busy: PerchPlugin {
         AnyView(BusyPanelView(store: store))
     }
 
+    public var hasSettings: Bool { true }
+
     public var settings: AnyView {
         AnyView(BusySettingsView(store: store))
     }

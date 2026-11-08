@@ -47,6 +47,8 @@ public final class Market: PerchPlugin {
         )
     }
 
+    public var hasSettings: Bool { true }
+
     public var settings: AnyView {
         AnyView(MarketSettingsView(store: store))
     }

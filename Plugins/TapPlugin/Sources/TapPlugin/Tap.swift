@@ -35,6 +35,8 @@ public final class Tap: PerchPlugin {
         AnyView(TapPanelView(store: store))
     }
 
+    public var hasSettings: Bool { true }
+
     public var settings: AnyView {
         AnyView(TapSettingsView(store: store))
     }
