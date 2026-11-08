@@ -30,6 +30,8 @@ packages:
     path: Plugins/TapPlugin
   SpinPlugin:
     path: Plugins/SpinPlugin
+  ScrollPlugin:
+    path: Plugins/ScrollPlugin
 targets:
   Perch:
     type: application
@@ -47,6 +49,12 @@ targets:
           destination: wrapper
           subpath: Contents/Helpers
       - target: PerchTap
+        embed: true
+        codeSign: false
+        copy:
+          destination: wrapper
+          subpath: Contents/Helpers
+      - target: PerchScroll
         embed: true
         codeSign: false
         copy:
@@ -74,6 +82,8 @@ targets:
         product: TapPlugin
       - package: SpinPlugin
         product: SpinPlugin
+      - package: ScrollPlugin
+        product: ScrollPlugin
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.ahlab.Perch
@@ -222,6 +232,52 @@ targets:
         NSAppleEventsUsageDescription: "Perch Tap asks System Events to type the shortcut a knock is mapped to, and runs your AppleScript actions."
         NSInputMonitoringUsageDescription: "Perch Tap can notice typing so knocks are ignored while you type. Optional — Accessibility already covers this."
         NSMotionUsageDescription: "Perch Tap reads the MacBook's built-in motion sensor to feel knocks on the chassis."
+  # Scroll's engine: an event tap that turns the mouse wheel, the trackpad,
+  # or both around. Not sandboxed — the sandbox refuses a tap that changes
+  # other apps' input (ScrollLink in ScrollKit has the details). Perch starts
+  # it while the plugin is on and set up, and it quits when Perch does.
+  PerchScroll:
+    type: application
+    platform: macOS
+    sources:
+      - path: PerchScroll
+        excludes:
+          - "*.entitlements"
+    dependencies:
+      - package: ScrollPlugin
+        product: ScrollKit
+    settings:
+      base:
+        PRODUCT_NAME: PerchScroll
+        PRODUCT_BUNDLE_IDENTIFIER: org.ahlab.Perch.scroll
+        CODE_SIGN_ENTITLEMENTS: PerchScroll/PerchScroll.entitlements
+        MARKETING_VERSION: "2.8.0"
+        CURRENT_PROJECT_VERSION: "13"
+        SKIP_INSTALL: YES
+      configs:
+        # A stable identity, as for PerchTap: Accessibility is granted to an
+        # exact signature, and an ad-hoc one changes on every build.
+        Debug:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: "Apple Development: Prasanth Sasikumar (5AD8QG2238)"
+          DEVELOPMENT_TEAM: 3U4384584Z
+          PROVISIONING_PROFILE_SPECIFIER: ""
+        Release:
+          CODE_SIGN_STYLE: Manual
+          CODE_SIGN_IDENTITY: "Developer ID Application: FLOWXR PTE. LTD. (3U4384584Z)"
+          DEVELOPMENT_TEAM: 3U4384584Z
+          ENABLE_HARDENED_RUNTIME: YES
+          CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+          OTHER_CODE_SIGN_FLAGS: "--timestamp"
+    info:
+      path: PerchScroll/Info.plist
+      properties:
+        LSUIElement: true
+        CFBundleDisplayName: Perch Scroll
+        CFBundleShortVersionString: "2.8.0"
+        CFBundleVersion: "13"
+        NSHumanReadableCopyright: "© 2026 Prasanth Sasikumar. Approach follows Scroll Reverser by Nick Moore, Apache License 2.0."
+        NSAccessibilityUsageDescription: "Perch Scroll turns the scrolls you chose around before they reach the app under the pointer."
   # The root helper behind the keep-awake toggle. Registered with
   # SMAppService.daemon by PerchKeepAwake and run by launchd, never launched directly.
   PerchHelper:
@@ -299,3 +355,5 @@ targets:
         product: TapPlugin
       - package: SpinPlugin
         product: SpinPlugin
+      - package: ScrollPlugin
+        product: ScrollPlugin

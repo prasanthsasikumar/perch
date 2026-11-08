@@ -292,6 +292,36 @@ Spin declares `network`, to download Spotify's album art, and `media`: it sends
 Apple Events to Spotify and Music, only while they are running, and only while
 the scene is switched on.
 
+### Scroll
+
+Reverse the mouse wheel while the trackpad stays natural. macOS has one
+natural-scrolling switch for every device; Scroll turns the scrolls you choose
+around on their way to the app, so the wheel can scroll the classic way while
+two fingers on the trackpad still push the page. The approach follows
+[Scroll Reverser](https://pilotmoon.com/scrollreverser/) by Nick Moore
+(Apache 2.0), which you no longer need alongside Perch.
+
+- **Per device.** Mouse wheel on, trackpad off by default; either can be
+  switched. Anything that scrolls with phases, as a trackpad does, counts as a
+  trackpad, and that includes a Magic Mouse.
+- **Per direction.** Up and down, left and right (Shift with a wheel included).
+- **One switch to pause.** Paused, Scroll stops looking at scrolls at all.
+
+The first time, the panel walks you through one permission, Accessibility.
+Nothing is reversed until you have finished that. If Scroll Reverser is still
+running, the panel says so: with both on, each undoes the other. Quit it and
+remove it from Login Items.
+
+**Why there's a second app.** Scroll's work happens in **PerchScroll**, inside
+`Perch.app/Contents/Helpers`. Changing other apps' scrolls takes an event tap
+that the sandbox refuses. PerchScroll is not sandboxed, has no window, runs
+only while the plugin is on and set up, and quits when Perch does.
+Accessibility is granted to it, not to Perch. It reads Scroll's settings from
+Perch's container and never writes them.
+
+Scroll declares `input`. It reads only scroll events, keeps none of them, and
+sends nothing anywhere.
+
 ## Settings
 
 Click the gear icon in the panel.
