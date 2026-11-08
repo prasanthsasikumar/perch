@@ -14,6 +14,7 @@ public final class Internet: PerchPlugin {
     public static let identifier = "org.ahlab.perch.internet"
     public static let displayName = "Internet"
     public static let icon = "wifi"
+    public static let summary = "Whether your connection is actually working, and how well."
     public static let capabilities: Set<PluginCapability> = [.network]
 
     /// Seconds between checks. A probe round is three tiny requests, so this

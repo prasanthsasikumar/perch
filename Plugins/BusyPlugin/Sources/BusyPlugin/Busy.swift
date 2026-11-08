@@ -14,6 +14,7 @@ public final class Busy: PerchPlugin {
     public static let identifier = "org.ahlab.perch.busy"
     public static let displayName = "Busy"
     public static let icon = "person.3.fill"
+    public static let summary = "How busy a place is right now, from Google's popular times."
     public static let capabilities: Set<PluginCapability> = [.network]
 
     public let store: BusyStore
@@ -77,6 +78,7 @@ public final class Busy: PerchPlugin {
             startRefreshing()
         } else {
             stopRefreshing()
+            session?.suspend()
         }
     }
 

@@ -51,7 +51,8 @@ public final class GoogleSession: NSObject {
         )
         hiddenWindow.title = "Busy"
         hiddenWindow.contentView = webView
-        hiddenWindow.orderBack(nil)
+        // Not ordered in here: the window is parked on the first load, so a
+        // plugin that starts switched off never puts a page in the window list.
 
         // WKWebView's own user agent lacks the `Version/… Safari/…` tokens
         // that Google uses to recognise a full browser; without them it
@@ -89,7 +90,19 @@ public final class GoogleSession: NSObject {
 
     // MARK: - Navigation
 
+    /// Puts the session to sleep when the plugin is switched off: any load in
+    /// flight fails, the page is swapped for a blank one so its scripts stop
+    /// running, and the parked window leaves the window list. The next `load`
+    /// parks it again. Cookies live in the default data store and survive.
+    public func suspend() {
+        finishLoad(throwing: CancellationError())
+        webView.stopLoading()
+        webView.loadHTMLString("", baseURL: nil)
+        hiddenWindow.orderOut(nil)
+    }
+
     private func navigate(to url: URL) async throws {
+        if !hiddenWindow.isVisible { hiddenWindow.orderBack(nil) }
         webView.stopLoading()
         return try await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask { @MainActor in

@@ -14,7 +14,7 @@ struct SetupGuide: View {
             Text("Getting a service-account key")
                 .font(.headline)
 
-            Step(number: 1, title: "Create a service account") {
+            SetupStep(number: 1, title: "Create a service account") {
                 Text("In Google Cloud, under IAM & Admin.")
                 Link(
                     "Open Service Accounts",
@@ -22,13 +22,13 @@ struct SetupGuide: View {
                 )
             }
 
-            Step(number: 2, title: "Download a JSON key") {
+            SetupStep(number: 2, title: "Download a JSON key") {
                 Text("On the account's **Keys** tab: Add Key › Create new key › JSON.")
                 Text("Google only hands this file over once. If you lose it, delete the old key and make a new one.")
                     .foregroundStyle(.secondary)
             }
 
-            Step(number: 3, title: "Enable the APIs") {
+            SetupStep(number: 3, title: "Enable the APIs") {
                 Link(
                     "Analytics Data API",
                     destination: URL(string: "https://console.cloud.google.com/apis/library/analyticsdata.googleapis.com")!
@@ -40,7 +40,7 @@ struct SetupGuide: View {
                 )
             }
 
-            Step(number: 4, title: "Share your properties with it") {
+            SetupStep(number: 4, title: "Share your properties with it") {
                 Text("In GA4: Admin › Property access management › add the account as a **Viewer**.")
                 if let clientEmail {
                     HStack(spacing: 4) {
@@ -79,7 +79,7 @@ struct SetupGuide: View {
     }
 }
 
-private struct Step<Content: View>: View {
+struct SetupStep<Content: View>: View {
     let number: Int
     let title: String
     @ViewBuilder let content: Content

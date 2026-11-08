@@ -29,4 +29,18 @@ public struct AnalyticsProperty: Codable, Identifiable, Hashable, Sendable {
             displayName: displayName
         )
     }
+
+    /// A PostHog site is keyed by `$host`, which is a bare domain. People
+    /// paste URLs, so the scheme and path are dropped and the rest is
+    /// lowercased, the way browsers report hosts.
+    public static func host(fromTyped typed: String) -> String {
+        var text = typed.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let range = text.range(of: "://") {
+            text = String(text[range.upperBound...])
+        }
+        if let slash = text.firstIndex(of: "/") {
+            text = String(text[..<slash])
+        }
+        return text.lowercased()
+    }
 }

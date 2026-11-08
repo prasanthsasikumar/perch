@@ -30,9 +30,9 @@ struct PropertyDetailView: View {
                 case .failed(let error):
                     failure(error)
                 case .loaded(let breakdown):
-                    summary(breakdown.totals)
+                    summary(breakdown)
                     ForEach(breakdown.sections) { section in
-                        SectionTable(section: section)
+                        SectionTable(section: section, includesEngagement: breakdown.includesEngagement)
                     }
                 }
             }
@@ -61,20 +61,24 @@ struct PropertyDetailView: View {
         }
     }
 
-    private func summary(_ totals: PropertyStats.Totals) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+    private func summary(_ breakdown: PropertyBreakdown) -> some View {
+        let totals = breakdown.totals
+        let measured = breakdown.includesEngagement
+        return VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 24) {
-                Figure(value: Formatting.compact(totals.activeUsers), label: "users")
+                Figure(value: Formatting.compact(totals.activeUsers), label: measured ? "users" : "visitors")
                 Figure(value: Formatting.compact(totals.sessions), label: "sessions")
-                Figure(value: Formatting.compact(totals.engagedSessions), label: "engaged")
-                Figure(value: Formatting.rate(totals.engagementRate), label: "engagement")
-                Figure(value: Formatting.duration(totals.averageEngagementTime), label: "avg. time")
+                Figure(value: measured ? Formatting.compact(totals.engagedSessions) : "—", label: "engaged")
+                Figure(value: measured ? Formatting.rate(totals.engagementRate) : "—", label: "engagement")
+                Figure(value: measured ? Formatting.duration(totals.averageEngagementTime) : "—", label: "avg. time")
                 Figure(value: Formatting.decimal(totals.pagesPerSession), label: "pages / session")
             }
-            if totals.looksLikeBots {
+            if measured, totals.looksLikeBots {
                 BotNote()
             }
-            Text("Engaged means the visit lasted over 10 seconds, saw a second page, or converted. Rows where nobody engaged are dimmed; they are usually crawlers.")
+            Text(measured
+                 ? "Engaged means the visit lasted over 10 seconds, saw a second page, or converted. Rows where nobody engaged are dimmed; they are usually crawlers."
+                 : "Counted from pageviews. Engagement isn't measured for this source, so it shows as —. Visitors are per day in cookieless mode. Landing pages are each session's first page.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -83,7 +87,7 @@ struct PropertyDetailView: View {
 
     private func failure(_ error: AnalyticsError) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label(error.message(clientEmail: store.clientEmail), systemImage: "exclamationmark.triangle")
+            Label(error.message(clientEmail: store.clientEmail, source: store.source), systemImage: "exclamationmark.triangle")
                 .foregroundStyle(.orange)
                 .fixedSize(horizontal: false, vertical: true)
             Button("Retry") { Task { await load() } }
@@ -113,6 +117,7 @@ struct PropertyDetailView: View {
 
 private struct SectionTable: View {
     let section: PropertyBreakdown.Section
+    let includesEngagement: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -144,13 +149,15 @@ private struct SectionTable: View {
                                 .help(row.value)
                             Text(Formatting.compact(row.totals.activeUsers))
                             Text(Formatting.compact(row.totals.sessions))
-                            Text(Formatting.rate(row.totals.engagementRate))
-                            Text(Formatting.duration(row.totals.averageEngagementTime))
+                            Text(includesEngagement ? Formatting.rate(row.totals.engagementRate) : "—")
+                            Text(includesEngagement ? Formatting.duration(row.totals.averageEngagementTime) : "—")
                             Text(Formatting.decimal(row.totals.pagesPerSession))
                         }
                         .font(.callout.monospacedDigit())
-                        .foregroundStyle(row.totals.hasNoEngagement ? .secondary : .primary)
-                        .opacity(row.totals.hasNoEngagement ? 0.6 : 1)
+                        // Unmeasured engagement reads as zero; dimming on it
+                        // would grey out every row as a crawler.
+                        .foregroundStyle(includesEngagement && row.totals.hasNoEngagement ? .secondary : .primary)
+                        .opacity(includesEngagement && row.totals.hasNoEngagement ? 0.6 : 1)
                     }
                 }
             }

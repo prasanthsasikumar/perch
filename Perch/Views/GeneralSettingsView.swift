@@ -3,6 +3,7 @@ import SwiftUI
 
 struct GeneralSettingsView: View {
     @Bindable var registry: PluginRegistry
+    let welcome: WelcomeCoordinator
 
     @AppStorage("showTitleInMenuBar") private var showTitleInMenuBar = true
     @AppStorage("titleTruncationLength") private var titleTruncationLength = 30
@@ -47,6 +48,12 @@ struct GeneralSettingsView: View {
                         .foregroundStyle(.red)
                 }
                 KeyboardShortcuts.Recorder("Open Perch:", name: .openPerch)
+            }
+
+            Section {
+                LabeledContent("Pick your tools again") {
+                    Button("Show Welcome…") { welcome.present() }
+                }
             }
         }
         .formStyle(.grouped)

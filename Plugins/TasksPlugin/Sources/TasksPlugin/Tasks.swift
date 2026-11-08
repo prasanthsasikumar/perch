@@ -12,6 +12,7 @@ public final class Tasks: PerchPlugin {
     public static let identifier = "org.ahlab.perch.tasks"
     public static let displayName = "Tasks"
     public static let icon = "checkmark.circle"
+    public static let summary = "A to-do list with your current task always in the menu bar."
     public static let capabilities: Set<PluginCapability> = []
 
     /// The file `store` reads and writes inside the plugin's storage

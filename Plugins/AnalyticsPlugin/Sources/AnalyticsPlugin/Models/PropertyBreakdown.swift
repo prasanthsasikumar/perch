@@ -52,11 +52,15 @@ public struct PropertyBreakdown: Equatable, Sendable {
 
     /// The whole week, undivided.
     public var totals: PropertyStats.Totals
-    /// In `Dimension.allCases` order.
+    /// In `Dimension.allCases` order. A source may skip dimensions it has
+    /// no answer for.
     public var sections: [Section]
+    /// See `PropertyStats.includesEngagement`.
+    public var includesEngagement: Bool
 
-    public init(totals: PropertyStats.Totals, sections: [Section]) {
+    public init(totals: PropertyStats.Totals, sections: [Section], includesEngagement: Bool = true) {
         self.totals = totals
         self.sections = sections
+        self.includesEngagement = includesEngagement
     }
 }

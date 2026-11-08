@@ -1,0 +1,30 @@
+{
+  "cache_key": "cache_8f1c0e",
+  "clickhouse": "SELECT ...",
+  "columns": [
+    "host", "users_30d", "sessions_30d", "views_30d",
+    "users_current", "sessions_current", "views_current",
+    "users_previous", "sessions_previous", "views_previous"
+  ],
+  "error": null,
+  "hasMore": false,
+  "hogql": "SELECT ...",
+  "is_cached": false,
+  "last_refresh": "2026-11-08T09:12:44.123Z",
+  "limit": 10000,
+  "modifiers": {"personsOnEventsMode": "person_id_override_properties_on_events"},
+  "offset": 0,
+  "query": "SELECT ...",
+  "results": [
+    ["a.example", 42, 51, 130, 12, 14, 37, 30, 37, 93],
+    ["b.example", 3, 3, 4, 3, 3, 4, 0, 0, 0]
+  ],
+  "timezone": "UTC",
+  "timings": [{"k": "./query", "t": 0.031}],
+  "types": [
+    ["host", "Nullable(String)"], ["users_30d", "UInt64"], ["sessions_30d", "UInt64"],
+    ["views_30d", "UInt64"], ["users_current", "UInt64"], ["sessions_current", "UInt64"],
+    ["views_current", "UInt64"], ["users_previous", "UInt64"], ["sessions_previous", "UInt64"],
+    ["views_previous", "UInt64"]
+  ]
+}

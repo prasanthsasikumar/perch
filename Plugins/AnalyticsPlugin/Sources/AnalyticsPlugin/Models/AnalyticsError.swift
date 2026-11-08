@@ -29,8 +29,31 @@ public enum AnalyticsError: Error, Equatable, Sendable {
     case malformedResponse
 
     /// One sentence, addressed to the user, saying what to do next.
-    public func message(clientEmail: String?) -> String {
-        switch self {
+    ///
+    /// `source` only changes the wording where the fix lives somewhere
+    /// different; the cases themselves mean the same thing for both.
+    public func message(clientEmail: String?, source: AnalyticsSource = .googleAnalytics) -> String {
+        if source == .postHog {
+            switch self {
+            case .notConfigured:
+                return "Add a PostHog personal API key in Settings."
+            case .authenticationFailed(let detail):
+                return "PostHog rejected the API key — replace it in Settings. (\(detail))"
+            case .permissionDenied:
+                return "No access. The key needs the Query: read scope and access to this project."
+            case .malformedKey(let detail):
+                return "That doesn't look right: \(detail)."
+            case .offline:
+                return "Couldn't reach PostHog."
+            case .api(let status, let message):
+                return "PostHog returned \(status). \(message)"
+            case .malformedResponse:
+                return "PostHog sent a response Perch couldn't read."
+            case .apiNotEnabled, .unusableKey:
+                break
+            }
+        }
+        return switch self {
         case .notConfigured:
             "Connect a Google service account in Settings."
         case .authenticationFailed(let detail):

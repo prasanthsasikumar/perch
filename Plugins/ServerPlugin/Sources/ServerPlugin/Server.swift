@@ -15,6 +15,7 @@ public final class Server: PerchPlugin {
     public static let identifier = "org.ahlab.perch.server"
     public static let displayName = "Server"
     public static let icon = "server.rack"
+    public static let summary = "Keeps an eye on the health of the servers you run."
     public static let capabilities: Set<PluginCapability> = [.network, .credentials]
 
     public let store: ServerStore

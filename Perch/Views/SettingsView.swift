@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Bindable var registry: PluginRegistry
+    let welcome: WelcomeCoordinator
 
     private enum Pane: Hashable {
         case general
@@ -10,21 +11,28 @@ struct SettingsView: View {
     }
 
     @State private var selection: Pane = .general
+    @State private var pluginsExpanded = true
 
     var body: some View {
         NavigationSplitView {
             List(selection: $selection) {
                 Label("General", systemImage: "gearshape").tag(Pane.general)
-                Label("Plugins", systemImage: "puzzlepiece.extension").tag(Pane.plugins)
-                ForEach(registry.enabled) { entry in
-                    Label(entry.displayName, systemImage: entry.icon).tag(Pane.plugin(entry.id))
+                // Each plugin's own settings sit under "Plugins", so it reads
+                // as one place: pick Plugins to turn them on and off, open a
+                // plugin beneath it to configure that one.
+                DisclosureGroup(isExpanded: $pluginsExpanded) {
+                    ForEach(registry.enabled) { entry in
+                        Label(entry.displayName, systemImage: entry.icon).tag(Pane.plugin(entry.id))
+                    }
+                } label: {
+                    Label("Plugins", systemImage: "puzzlepiece.extension").tag(Pane.plugins)
                 }
             }
             .navigationSplitViewColumnWidth(180)
         } detail: {
             switch selection {
             case .general:
-                GeneralSettingsView(registry: registry)
+                GeneralSettingsView(registry: registry, welcome: welcome)
             case .plugins:
                 PluginsSettingsView(registry: registry)
             case .plugin(let id):

@@ -22,9 +22,9 @@ struct AnalyticsPanelView: View {
     var body: some View {
         Group {
             if !store.isConfigured {
-                ConnectPrompt(openSettings: showSettings)
+                ConnectPrompt(source: store.source, openSettings: showSettings)
             } else if store.properties.isEmpty {
-                EmptyPrompt(openSettings: showSettings)
+                EmptyPrompt(source: store.source, openSettings: showSettings)
             } else {
                 content
             }
@@ -38,7 +38,7 @@ struct AnalyticsPanelView: View {
     private var content: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let failure = store.credentialFailure {
-                CredentialBanner(failure: failure, openSettings: showSettings)
+                CredentialBanner(failure: failure, source: store.source, openSettings: showSettings)
             }
 
             ScrollView {
@@ -47,6 +47,7 @@ struct AnalyticsPanelView: View {
                         if index > 0 { Divider() }
                         PropertyCardView(
                             property: property,
+                            source: store.source,
                             stats: store.stats[property.id],
                             failure: store.failures[property.id],
                             clientEmail: store.clientEmail,
@@ -122,6 +123,7 @@ struct AnalyticsPanelView: View {
 // MARK: - Empty states
 
 private struct ConnectPrompt: View {
+    let source: AnalyticsSource
     let openSettings: () -> Void
 
     var body: some View {
@@ -129,9 +131,11 @@ private struct ConnectPrompt: View {
             Image(systemName: "chart.line.uptrend.xyaxis")
                 .font(.title2)
                 .foregroundStyle(.secondary)
-            Text("Connect Google Analytics")
+            Text("Connect \(source.title)")
                 .font(.subheadline.weight(.medium))
-            Text("Import a service-account key to see your properties here.")
+            Text(source == .postHog
+                 ? "Settings walks you through getting a key, in four short steps."
+                 : "Import a service-account key to see your properties here.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -145,13 +149,16 @@ private struct ConnectPrompt: View {
 }
 
 private struct EmptyPrompt: View {
+    let source: AnalyticsSource
     let openSettings: () -> Void
 
     var body: some View {
         VStack(spacing: 8) {
-            Text("No properties yet")
+            Text(source == .postHog ? "No sites yet" : "No properties yet")
                 .font(.subheadline.weight(.medium))
-            Text("Find the ones this account can see in Settings.")
+            Text(source == .postHog
+                 ? "Find the domains this project has seen in Settings."
+                 : "Find the ones this account can see in Settings.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -168,12 +175,13 @@ private struct EmptyPrompt: View {
 /// the top instead of repeating itself on every card.
 private struct CredentialBanner: View {
     let failure: AnalyticsError
+    let source: AnalyticsSource
     let openSettings: () -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 6) {
             Image(systemName: "exclamationmark.triangle.fill")
-            Text(failure.message(clientEmail: nil))
+            Text(failure.message(clientEmail: nil, source: source))
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 4)
             Button("Fix", action: openSettings)

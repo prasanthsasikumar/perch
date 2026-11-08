@@ -182,4 +182,33 @@ final class PluginRegistryTests: XCTestCase {
         XCTAssertTrue(PluginRegistry.tabsUseIcons(count: 6))
         XCTAssertFalse(makeRegistry().tabStripUsesIcons)
     }
+
+    // MARK: - Welcome
+
+    func testFreshInstallNeedsWelcomeAndStartsWithTheGivenList() {
+        let registry = PluginRegistry(plugins: makePlugins(), defaults: suite, freshInstallEnabled: ["alpha"])
+        XCTAssertTrue(registry.needsWelcome)
+        XCTAssertEqual(registry.enabled.map(\.id), ["alpha"])
+    }
+
+    func testUpgraderIsNotWelcomed() {
+        suite.set(["alpha", "beta"], forKey: "enabledPluginIDs")
+        let registry = PluginRegistry(plugins: makePlugins(), defaults: suite, freshInstallEnabled: ["alpha"])
+        XCTAssertFalse(registry.needsWelcome)
+        XCTAssertEqual(Set(registry.enabled.map(\.id)), ["alpha", "beta"])
+    }
+
+    func testFinishingWelcomeIsRemembered() {
+        let first = PluginRegistry(plugins: makePlugins(), defaults: suite)
+        first.needsWelcome = false
+        let second = PluginRegistry(plugins: makePlugins(), defaults: suite)
+        XCTAssertFalse(second.needsWelcome)
+    }
+
+    func testSetEnabledIDsReplacesTheSetAndIgnoresUnknownIDs() {
+        let registry = makeRegistry()
+        registry.setEnabledIDs(["beta", "ghost"])
+        XCTAssertEqual(registry.enabled.map(\.id), ["beta"])
+        XCTAssertEqual(registry.active?.id, "beta")
+    }
 }

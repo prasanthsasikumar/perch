@@ -23,7 +23,8 @@ extension PluginContext {
 @main
 struct PerchApp: App {
     @State private var registry: PluginRegistry
-    @State private var appState = AppState()
+    @State private var appState: AppState
+    private let welcome: WelcomeCoordinator
     @State private var sleep = SleepController()
     @AppStorage("showTitleInMenuBar") private var showTitleInMenuBar = true
     @AppStorage("titleTruncationLength") private var titleTruncationLength = 30
@@ -38,9 +39,19 @@ struct PerchApp: App {
                 pluginsDirectory: PluginContext.perch("").storage.directory, defaults: .standard
             )
         }
-        let registry = PluginRegistry(plugins: PerchApp.makePlugins())
+        let registry = PluginRegistry(
+            plugins: PerchApp.makePlugins(),
+            freshInstallEnabled: [Tasks.identifier, Internet.identifier]
+        )
+        let appState = AppState()
         _registry = State(initialValue: registry)
+        _appState = State(initialValue: appState)
+        welcome = WelcomeCoordinator(registry: registry, appState: appState)
         PerchApp.flushPluginsOnTermination(registry)
+        // Once the app has finished launching; a window ordered in from
+        // `App.init` can open before AppKit is ready to show it.
+        let welcome = welcome
+        DispatchQueue.main.async { welcome.presentIfNeeded() }
     }
 
     /// The one place in Perch that decides which plugins exist.
@@ -87,7 +98,7 @@ struct PerchApp: App {
         .menuBarExtraStyle(.window)
 
         Settings {
-            SettingsView(registry: registry)
+            SettingsView(registry: registry, welcome: welcome)
         }
     }
 

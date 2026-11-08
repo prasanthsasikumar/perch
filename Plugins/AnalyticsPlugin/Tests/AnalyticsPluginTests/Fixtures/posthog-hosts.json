@@ -1,0 +1,15 @@
+{
+  "columns": ["host", "views"],
+  "hasMore": false,
+  "is_cached": false,
+  "limit": 500,
+  "offset": 0,
+  "results": [
+    ["www.flowsxr.com", 120],
+    ["Beta.example", 9],
+    [null, 2],
+    ["alpha.example", 4]
+  ],
+  "timezone": "UTC",
+  "types": [["host", "Nullable(String)"], ["views", "UInt64"]]
+}

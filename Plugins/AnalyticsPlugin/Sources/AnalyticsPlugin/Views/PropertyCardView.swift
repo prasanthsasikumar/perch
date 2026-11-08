@@ -5,6 +5,7 @@ import SwiftUI
 /// everything the summary script prints.
 struct PropertyCardView: View {
     let property: AnalyticsProperty
+    let source: AnalyticsSource
     let stats: PropertyStats?
     let failure: AnalyticsError?
     let clientEmail: String?
@@ -18,13 +19,15 @@ struct PropertyCardView: View {
             header
 
             if let failure {
-                FailureNote(failure: failure, clientEmail: clientEmail)
+                FailureNote(failure: failure, clientEmail: clientEmail, source: source)
             }
 
             if let stats {
                 weekHeadline(stats)
                 if isExpanded {
-                    engagement(stats.currentWeek)
+                    if stats.includesEngagement {
+                        engagement(stats.currentWeek)
+                    }
                     Divider()
                     thirtyDays(stats)
                     if !stats.daily.isEmpty {
@@ -77,10 +80,11 @@ struct PropertyCardView: View {
                     .frame(width: 92)
             }
             MetricRow(
-                label: "Users",
+                label: usersLabel,
                 value: Formatting.compact(stats.currentWeek.activeUsers),
                 change: stats.usersChange
             )
+            .help(usersHelp)
             MetricRow(
                 label: "Sessions",
                 value: Formatting.compact(stats.currentWeek.sessions),
@@ -108,20 +112,43 @@ struct PropertyCardView: View {
         .help("Sessions that lasted over 10 seconds, saw a second page, or converted")
     }
 
+    /// PostHog's cookieless visitors are a fresh hash every day, so over a
+    /// week they count visitor-days, not people. Calling them "Users" would
+    /// invite a comparison with GA that does not hold.
+    private var usersLabel: String {
+        source == .postHog ? "Visitors" : "Users"
+    }
+
+    private var usersHelp: String {
+        source == .postHog
+            ? "Distinct visitors per day, summed: cookieless tracking can't tell a returning visitor on another day"
+            : ""
+    }
+
     private func thirtyDays(_ stats: PropertyStats) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Last 30 days")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             HStack(spacing: 14) {
-                Stat(value: Formatting.compact(stats.last30Days.activeUsers), label: "users")
+                Stat(value: Formatting.compact(stats.last30Days.activeUsers), label: usersLabel.lowercased())
                 Stat(value: Formatting.compact(stats.last30Days.sessions), label: "sessions")
                 Stat(value: Formatting.compact(stats.last30Days.screenPageViews), label: "views")
             }
             HStack(spacing: 14) {
-                Stat(value: Formatting.rate(stats.last30Days.bounceRate), label: "bounce")
-                Stat(value: Formatting.duration(stats.last30Days.averageSessionDuration), label: "avg. session")
+                // Unmeasured, not zero: PostHog's pageview counts carry no
+                // bounce or duration, and "0.0%" would be a claim.
+                Stat(
+                    value: stats.includesEngagement ? Formatting.rate(stats.last30Days.bounceRate) : "—",
+                    label: "bounce"
+                )
+                Stat(
+                    value: stats.includesEngagement
+                        ? Formatting.duration(stats.last30Days.averageSessionDuration) : "—",
+                    label: "avg. session"
+                )
             }
+            .help(stats.includesEngagement ? "" : "\(source.title) doesn't report this here")
         }
     }
 
@@ -223,12 +250,13 @@ private struct Stat: View {
 private struct FailureNote: View {
     let failure: AnalyticsError
     let clientEmail: String?
+    let source: AnalyticsSource
 
     var body: some View {
         HStack(alignment: .top, spacing: 6) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.caption)
-            Text(failure.message(clientEmail: clientEmail))
+            Text(failure.message(clientEmail: clientEmail, source: source))
                 .font(.caption)
                 .fixedSize(horizontal: false, vertical: true)
             if case .permissionDenied = failure, let clientEmail {

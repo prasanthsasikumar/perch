@@ -16,6 +16,7 @@ final class PluginRegistry {
         let plugin: any PerchPlugin
         let displayName: String
         let icon: String
+        let summary: String
         let capabilities: Set<PluginCapability>
     }
 
@@ -23,6 +24,7 @@ final class PluginRegistry {
         static let enabled = "enabledPluginIDs"
         static let seen = "seenPluginIDs"
         static let active = "activePluginID"
+        static let welcomed = "hasCompletedWelcome"
     }
 
     let entries: [Entry]
@@ -45,7 +47,19 @@ final class PluginRegistry {
         didSet { defaults.set(activeID, forKey: Key.active) }
     }
 
-    init(plugins: [any PerchPlugin], defaults: UserDefaults = .standard) {
+    /// Whether the welcome window should open at launch: true only on a
+    /// fresh install that has not picked its plugins yet.
+    var needsWelcome: Bool {
+        didSet { defaults.set(!needsWelcome, forKey: Key.welcomed) }
+    }
+
+    /// `freshInstallEnabled` is what a brand-new install starts with, before
+    /// the welcome window lets the user choose. `nil` enables everything.
+    init(
+        plugins: [any PerchPlugin],
+        defaults: UserDefaults = .standard,
+        freshInstallEnabled: Set<String>? = nil
+    ) {
         self.defaults = defaults
         entries = plugins.map { plugin in
             Entry(
@@ -53,6 +67,7 @@ final class PluginRegistry {
                 plugin: plugin,
                 displayName: plugin.displayName,
                 icon: plugin.icon,
+                summary: plugin.summary,
                 capabilities: plugin.capabilities
             )
         }
@@ -73,9 +88,17 @@ final class PluginRegistry {
             // intersecting with `known` keeps those ghosts out of the UI.
             enabledIDs = Set(stored).intersection(known).union(known.subtracting(seen))
         } else {
-            enabledIDs = known
+            // A short list rather than everything: the plugins that scrape
+            // pages or poll servers should not start working before the user
+            // has even seen the welcome window that offers them.
+            enabledIDs = freshInstallEnabled.map { $0.intersection(known) } ?? known
         }
         defaults.set(Array(known), forKey: Key.seen)
+        // Only a fresh install is welcomed. Someone upgrading already has an
+        // enabled list they chose, and a window asking them to choose again
+        // would be noise.
+        needsWelcome = stored == nil && !defaults.bool(forKey: Key.welcomed)
+        if !needsWelcome { defaults.set(true, forKey: Key.welcomed) }
         activeID = defaults.string(forKey: Key.active).flatMap { known.contains($0) ? $0 : nil }
         // The menu bar used to follow a separate "primary" setting; it follows
         // the selected tab now, and the old key is just clutter.
@@ -126,6 +149,14 @@ final class PluginRegistry {
         } else {
             enabledIDs.remove(id)
         }
+    }
+
+    /// Replaces the whole enabled set at once — the welcome window's grid.
+    /// One assignment, so plugins are notified once each rather than once per
+    /// card.
+    func setEnabledIDs(_ ids: Set<String>) {
+        let next = ids.intersection(entries.map(\.id))
+        if next != enabledIDs { enabledIDs = next }
     }
 
     /// Makes `PerchPlugin.flush()`'s promise real: called from the panel's Quit

@@ -15,6 +15,7 @@ public final class Download: PerchPlugin {
     public static let identifier = "org.ahlab.perch.download"
     public static let displayName = "Download"
     public static let icon = "arrow.down.circle"
+    public static let summary = "Paste a link, get the video or its audio in Downloads."
     public static let capabilities: Set<PluginCapability> = [.network, .downloads]
 
     public let store: DownloadStore
