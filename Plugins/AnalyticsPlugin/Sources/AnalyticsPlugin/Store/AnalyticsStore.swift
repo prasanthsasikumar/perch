@@ -15,15 +15,29 @@ struct AnalyticsCache: Codable {
     var lastRefreshed: Date?
 }
 
-/// The plugin's state, and the only thing the views talk to.
+/// The plugin's state for one source, and the only thing the views talk to.
+///
+/// The plugin keeps one of these per `AnalyticsSource`, each with its own
+/// cache file and Keychain item, which is what lets the user flip between
+/// sources without losing either side's setup.
 @MainActor
 @Observable
 public final class AnalyticsStore {
     /// How a live API is built from a credential. Injected so tests can swap
     /// in a stub without a network or a keychain.
     public typealias APIFactory = @Sendable (ServiceAccount) -> any GoogleAnalyticsAPI
+    public typealias PostHogAPIFactory = @Sendable (PostHogCredential) -> any GoogleAnalyticsAPI
 
     static let cacheFilename = "analytics.json"
+    static let postHogCacheFilename = "posthog.json"
+
+    /// How each source turns its stored credential into an API.
+    private enum Factory {
+        case google(APIFactory)
+        case postHog(PostHogAPIFactory)
+    }
+
+    public let source: AnalyticsSource
 
     public private(set) var properties: [AnalyticsProperty] = []
     public private(set) var stats: [String: PropertyStats] = [:]
@@ -39,9 +53,19 @@ public final class AnalyticsStore {
         didSet { persist() }
     }
 
+    /// The stored PostHog connection, so Settings can show its region,
+    /// project and a masked key. Always `nil` for the GA store.
+    public var postHogCredential: PostHogCredential? {
+        loadCredentialIfNeeded()
+        return loadedPostHogCredential
+    }
+
+    private var loadedPostHogCredential: PostHogCredential?
+
     private let storage: PluginStorage
+    private let cacheFilename: String
     private let credentials: any CredentialStore
-    private let apiFactory: APIFactory
+    private let factory: Factory
     private let now: () -> Date
 
     private var api: (any GoogleAnalyticsAPI)?
@@ -50,15 +74,54 @@ public final class AnalyticsStore {
     /// to the Keychain.
     private var didLoadCredential = false
 
-    public init(
+    public convenience init(
         storage: PluginStorage,
         credentials: any CredentialStore,
         apiFactory: @escaping APIFactory = { LiveGoogleAnalyticsAPI(account: $0) },
         now: @escaping () -> Date = Date.init
     ) {
+        self.init(
+            source: .googleAnalytics,
+            storage: storage,
+            cacheFilename: Self.cacheFilename,
+            credentials: credentials,
+            factory: .google(apiFactory),
+            now: now
+        )
+    }
+
+    /// The PostHog store. Its own cache file, so the two sources' sites and
+    /// numbers never mix, and its own Keychain item, passed in as
+    /// `credentials`.
+    public convenience init(
+        postHogStorage storage: PluginStorage,
+        credentials: any CredentialStore,
+        apiFactory: @escaping PostHogAPIFactory = { LivePostHogAPI(credential: $0) },
+        now: @escaping () -> Date = Date.init
+    ) {
+        self.init(
+            source: .postHog,
+            storage: storage,
+            cacheFilename: Self.postHogCacheFilename,
+            credentials: credentials,
+            factory: .postHog(apiFactory),
+            now: now
+        )
+    }
+
+    private init(
+        source: AnalyticsSource,
+        storage: PluginStorage,
+        cacheFilename: String,
+        credentials: any CredentialStore,
+        factory: Factory,
+        now: @escaping () -> Date
+    ) {
+        self.source = source
         self.storage = storage
+        self.cacheFilename = cacheFilename
         self.credentials = credentials
-        self.apiFactory = apiFactory
+        self.factory = factory
         self.now = now
 
         loadCache()
@@ -79,9 +142,12 @@ public final class AnalyticsStore {
         return api != nil
     }
 
+    /// `nil` rather than empty for PostHog, which has no such address, so
+    /// the views' "add this account as a viewer" wording never appears there.
     public var clientEmail: String? {
         loadCredentialIfNeeded()
-        return api?.clientEmail
+        guard let email = api?.clientEmail, !email.isEmpty else { return nil }
+        return email
     }
 
     /// Reads a service-account JSON, stores it, and starts using it.
@@ -96,6 +162,7 @@ public final class AnalyticsStore {
     }
 
     public func importCredential(keyFile data: Data) throws {
+        guard case .google(let apiFactory) = factory else { throw AnalyticsError.notConfigured }
         let account = try ServiceAccount(keyFile: data)
         try credentials.save(try JSONEncoder().encode(account))
         api = apiFactory(account)
@@ -107,9 +174,37 @@ public final class AnalyticsStore {
         didLoadCredential = true
     }
 
+    /// Validates and stores a PostHog connection, and starts using it.
+    ///
+    /// Region, project and key go into the Keychain together; none of them
+    /// is written to the plugin's cache.
+    public func connectPostHog(
+        region: PostHogCredential.Region, projectID: String, apiKey: String
+    ) throws {
+        guard case .postHog(let apiFactory) = factory else { throw AnalyticsError.notConfigured }
+        let credential = try PostHogCredential.validated(region: region, projectID: projectID, apiKey: apiKey)
+        let changedProject = loadedPostHogCredential.map {
+            $0.projectID != credential.projectID || $0.region != credential.region
+        } ?? false
+        try credentials.save(try JSONEncoder().encode(credential))
+        api = apiFactory(credential)
+        loadedPostHogCredential = credential
+        credentialFailure = nil
+        didLoadCredential = true
+        // A different project has different sites; numbers cached from the
+        // old one would sit under the new one's name otherwise.
+        if changedProject {
+            stats.removeAll()
+            failures.removeAll()
+            lastRefreshed = nil
+            persist()
+        }
+    }
+
     public func removeCredential() throws {
         try credentials.remove()
         api = nil
+        loadedPostHogCredential = nil
         // The numbers came from a credential the user just revoked, so they
         // should not keep sitting in the panel as though they were live.
         stats.removeAll()
@@ -131,12 +226,25 @@ public final class AnalyticsStore {
     }
 
     private func loadCredential() {
-        guard let data = try? credentials.load(),
-              let account = try? JSONDecoder().decode(ServiceAccount.self, from: data) else {
+        guard let data = try? credentials.load() else {
             credentialFailure = .notConfigured
             return
         }
-        api = apiFactory(account)
+        switch factory {
+        case .google(let apiFactory):
+            guard let account = try? JSONDecoder().decode(ServiceAccount.self, from: data) else {
+                credentialFailure = .notConfigured
+                return
+            }
+            api = apiFactory(account)
+        case .postHog(let apiFactory):
+            guard let credential = try? JSONDecoder().decode(PostHogCredential.self, from: data) else {
+                credentialFailure = .notConfigured
+                return
+            }
+            loadedPostHogCredential = credential
+            api = apiFactory(credential)
+        }
     }
 
     // MARK: - Properties
@@ -211,36 +319,12 @@ public final class AnalyticsStore {
         let today = now()
         let ids = properties.map(\.id)
 
-        // Concurrently, because one slow property should not hold up the rest
-        // and the panel renders each card independently anyway.
-        let results = await withTaskGroup(
-            of: (String, Result<PropertyStats, AnalyticsError>).self
-        ) { group -> [(String, Result<PropertyStats, AnalyticsError>)] in
-            for id in ids {
-                group.addTask {
-                    do {
-                        return (id, .success(try await api.stats(for: id, today: today)))
-                    } catch let error as AnalyticsError {
-                        return (id, .failure(error))
-                    } catch {
-                        return (id, .failure(.malformedResponse))
-                    }
-                }
-            }
-            var collected: [(String, Result<PropertyStats, AnalyticsError>)] = []
-            for await result in group { collected.append(result) }
-            return collected
-        }
+        let results = await api.stats(for: ids, today: today)
 
         // Toggling the plugin off mid-fetch cancels this task. Without this
         // check, the in-flight `stats(for:today:)` calls throw a
-        // cancellation error, the generic `catch` above maps it to
-        // `.malformedResponse`, and `apply` records a spurious "Couldn't
-        // refresh" failure that can persist on re-enable even though nothing
-        // was actually wrong.
-        // Toggling the plugin off mid-fetch cancels this task. Without this
-        // check, the in-flight `stats(for:today:)` calls throw a
-        // cancellation error, the generic `catch` above maps it to
+        // cancellation error, the generic `catch` in `GoogleAnalyticsAPI.stats(for:today:)`
+        // maps it to
         // `.malformedResponse`, and `apply` records a spurious "Couldn't
         // refresh" failure that can persist on re-enable even though nothing
         // was actually wrong.
@@ -285,7 +369,7 @@ public final class AnalyticsStore {
                 primaryPropertyID: primaryPropertyID,
                 lastRefreshed: lastRefreshed
             ),
-            named: Self.cacheFilename
+            named: cacheFilename
         )
     }
 
@@ -294,7 +378,7 @@ public final class AnalyticsStore {
     private func loadCache() {
         // An unreadable cache is not worth surfacing: `PluginStorage` has
         // already kept a `.bak`, and everything in here is refetchable.
-        guard let cache = try? storage.load(AnalyticsCache.self, named: Self.cacheFilename) else { return }
+        guard let cache = try? storage.load(AnalyticsCache.self, named: cacheFilename) else { return }
         properties = cache.properties
         stats = cache.stats
         primaryPropertyID = cache.primaryPropertyID ?? cache.properties.first?.id

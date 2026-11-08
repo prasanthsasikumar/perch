@@ -104,17 +104,38 @@ public struct PropertyStats: Codable, Equatable, Sendable {
     public var currentWeek: Totals
     public var previousWeek: Totals
     public var daily: [DailyPoint]
+    /// Whether the engagement fields — engaged sessions, engagement time,
+    /// bounce rate, average session duration — were measured at all. GA
+    /// measures them; PostHog's pageview counts do not, and a zero there
+    /// would read as "nobody engaged" and flag every site as bots. Views
+    /// show these as unavailable instead.
+    public var includesEngagement: Bool
 
     public init(
         last30Days: Totals = Totals(),
         currentWeek: Totals = Totals(),
         previousWeek: Totals = Totals(),
-        daily: [DailyPoint] = []
+        daily: [DailyPoint] = [],
+        includesEngagement: Bool = true
     ) {
         self.last30Days = last30Days
         self.currentWeek = currentWeek
         self.previousWeek = previousWeek
         self.daily = daily
+        self.includesEngagement = includesEngagement
+    }
+
+    // Hand-written so caches from before PostHog existed, which are all GA,
+    // still decode as measuring engagement.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            last30Days: try container.decode(Totals.self, forKey: .last30Days),
+            currentWeek: try container.decode(Totals.self, forKey: .currentWeek),
+            previousWeek: try container.decode(Totals.self, forKey: .previousWeek),
+            daily: try container.decode([DailyPoint].self, forKey: .daily),
+            includesEngagement: try container.decodeIfPresent(Bool.self, forKey: .includesEngagement) ?? true
+        )
     }
 
     public var usersChange: PercentChange {

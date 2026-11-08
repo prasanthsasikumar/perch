@@ -1,0 +1,14 @@
+{
+  "columns": ["host", "day", "users", "sessions"],
+  "hasMore": false,
+  "is_cached": false,
+  "limit": 10000,
+  "offset": 0,
+  "results": [
+    ["a.example", "2026-11-06", 4, 5],
+    ["a.example", "2026-11-08", 7, 8],
+    ["b.example", "2026-11-08", 3, 3]
+  ],
+  "timezone": "UTC",
+  "types": [["host", "Nullable(String)"], ["day", "Date"], ["users", "UInt64"], ["sessions", "UInt64"]]
+}
