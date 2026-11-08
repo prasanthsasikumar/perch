@@ -23,6 +23,9 @@ public protocol PerchPlugin: AnyObject, Observable {
     static var displayName: String { get }
     /// SF Symbol name.
     static var icon: String { get }
+    /// One sentence saying what the plugin is for, shown on its card in the
+    /// welcome window. Default: empty, and the card shows only the name.
+    static var summary: String { get }
     /// Disclosed to the user in Settings before they enable the plugin.
     static var capabilities: Set<PluginCapability> { get }
 
@@ -72,6 +75,7 @@ public protocol PerchPlugin: AnyObject, Observable {
 }
 
 public extension PerchPlugin {
+    static var summary: String { "" }
     var settings: AnyView { AnyView(EmptyView()) }
     var menuBarLabel: MenuBarLabel? { nil }
     var footerActions: [PluginAction] { [] }
@@ -84,5 +88,6 @@ public extension PerchPlugin {
     var identifier: String { Self.identifier }
     var displayName: String { Self.displayName }
     var icon: String { Self.icon }
+    var summary: String { Self.summary }
     var capabilities: Set<PluginCapability> { Self.capabilities }
 }

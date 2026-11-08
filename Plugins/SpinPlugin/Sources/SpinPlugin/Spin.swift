@@ -14,6 +14,7 @@ public final class Spin: PerchPlugin {
     public static let identifier = "org.ahlab.perch.spin"
     public static let displayName = "Spin"
     public static let icon = "record.circle"
+    public static let summary = "Turns your desktop into a turntable playing whatever's on."
     public static let capabilities: Set<PluginCapability> = [.network, .media]
 
     public let model: SpinModel

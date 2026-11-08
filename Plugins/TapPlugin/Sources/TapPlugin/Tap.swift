@@ -17,6 +17,7 @@ public final class Tap: PerchPlugin {
     public static let identifier = TapLink.pluginIdentifier
     public static let displayName = "Tap"
     public static let icon = "hand.tap"
+    public static let summary = "Knock on your MacBook to run a shortcut."
     public static let capabilities: Set<PluginCapability> = [.accessibility]
 
     public let store: TapStore
